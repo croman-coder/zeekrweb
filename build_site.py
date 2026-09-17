@@ -61,7 +61,7 @@ MODELS = {
     "7x": {
         "name": "ZEEKR 7X",
         "tagline": "El SUV de próxima generación",
-        "claim": "Diseñado para Noto disfrutar, construido para llegar más lejos.",
+        "claim": "Diseñado para que disfrutes cada viaje, construido para llegar más lejos.",
         "hero_desktop": "images/hero/7x-desktop.jpg",
         "hero_mobile": "images/hero/7x-mobile.jpg",
         "card": "images/modelos/7x.jpg",
@@ -298,7 +298,7 @@ def heroes():
           <picture>
             <source media="(max-width:767px)" srcset="{m['hero_mobile']}">
             <img class="slide-image" src="{m['hero_desktop']}" alt="ZEEKR {key.upper() if key!='7x' else '7X'} — {m['claim']}" fetchpriority="{'high' if i==0 else 'low'}" loading="{'eager' if i==0 else 'lazy'}">
-          </figure>
+          </picture>
           <div class="shade"></div>
           <div class="slide-content">
             <h2>{m['name']}</h2>
