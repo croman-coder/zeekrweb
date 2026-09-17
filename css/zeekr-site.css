@@ -21,6 +21,7 @@ button{font-family:inherit}
 .skip-link:focus{left:12px}
 
 /* ---------- botones ---------- */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 28px;border-radius:999px;font-size:15px;font-family:var(--font-head);letter-spacing:.02em;cursor:pointer;border:1px solid transparent;transition:all .25s ease;background:none;color:var(--ink)}
 .btn-solid{background:var(--ink);color:#0F0F0F;border-color:var(--ink)}
 .btn-solid:hover{background:var(--accent);border-color:var(--accent);color:#0F0F0F}
@@ -34,10 +35,12 @@ button{font-family:inherit}
 .header-inner{position:relative;display:flex;align-items:center;justify-content:space-between;height:var(--header-h);max-width:1920px;margin:0 auto;padding:0 24px}
 .header-left{display:flex;align-items:center;gap:26px}
 .header-right{display:flex;align-items:center;gap:22px}
-.menu-link{font-size:14.5px;letter-spacing:.02em;text-transform:none;padding:4px 0;border-bottom:1px solid transparent;white-space:nowrap;background:none;border-top:0;border-left:0;border-right:0;color:inherit;cursor:pointer;font-family:inherit}
+.menu-link{font-size:14.5px;letter-spacing:.02em;text-transform:none;padding:13px 0;border-bottom:1px solid transparent;white-space:nowrap;background:none;border-top:0;border-left:0;border-right:0;color:inherit;cursor:pointer;font-family:inherit}
 .menu-link:hover,.menu-link.active{border-bottom-color:var(--accent)}
 .header-logo{color:inherit;margin-right:18px}
-.header-wordmark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--font-head);font-size:24px;letter-spacing:.42em;text-indent:.42em;color:inherit}
+.header-wordmark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:inherit;display:inline-flex}
+.wordmark{width:114px;height:14px;display:block}
+.logo{width:28px;height:28px;color:currentColor}
 .header-locale{font-size:13px;color:inherit;opacity:.85;letter-spacing:.03em;display:inline-flex;align-items:center;gap:5px}
 .header-locale svg{width:17px;height:17px}
 .models-panel{position:fixed;top:var(--header-h);left:0;right:0;z-index:95;background:#fff;color:#161616;box-shadow:0 24px 48px rgba(0,0,0,.28)}
