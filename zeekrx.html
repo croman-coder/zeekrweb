@@ -20,7 +20,7 @@
   <meta name="twitter:description" content="ZEEKR X en Paraguay: SUV eléctrico urbano premium con hasta 440 km de autonomía (WLTP), 0–100 km/h en 3,8 s, techo panorámico y XTCS inteligente. Conocé sus versiones.">
   <meta name="twitter:image" content="https://zeekrlife.com.py/images/og.jpg">
   <link rel="icon" href="favicon.png">
-  <link rel="stylesheet" href="css/zeekr-site.css">
+  <link rel="stylesheet" href="css/zeekr-site.css?v=2">
   <link rel="preload" as="image" href="images/modelos/x.jpg" media="(min-width:768px)">
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Product", "name": "ZEEKR X", "brand": {"@type": "Brand", "name": "ZEEKR"}, "description": "SUV compacto eléctrico premium. Hasta 440 km de autonomía WLTP (RWD), 0–100 km/h en 3,8 s (AWD) y batería de 69 kWh.", "breadcrumb": "ZEEKR Paraguay > ZEEKR X"}</script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-E6H9ZC5CG3"></script>
@@ -31,20 +31,41 @@
 <a class="skip-link" href="#main">Saltar al contenido</a>
 <header class="site-header" id="siteHeader">
   <div class="header-inner">
-    <nav class="header-menus header-left" aria-label="Modelos">
-      <a class="menu-link" href="zeekr001.html">ZEEKR 001</a>
-      <a class="menu-link active" href="zeekrx.html">ZEEKR X</a>
-      <a class="menu-link" href="zeekr7x.html">ZEEKR 7X</a>
-      <a class="menu-link" href="noticias.html">Noticias</a>
-      <a class="menu-link" href="nosotros.html">Nosotros</a>
-    </nav>
-    <a class="header-logo" href="index.html" aria-label="ZEEKR Paraguay — Inicio"><svg class="logo" viewBox="0 0 80 80" fill="currentColor" aria-hidden="true"><circle cx="40" cy="40" r="40"/><path fill-rule="evenodd" fill="#0F0F0F" d="M13.3 10.7h22.2l-.05 34.6H13.3V34.4h10.4v-2.6H13.3V10.7Zm45.4 51.3H14.7L47 44.4l11.7 17.6Zm8-2H54.8l-.1-49.3h12V60Zm-12-49.3h12v38l-12 11.3Z"/></svg></a>
+    <div class="header-left">
+      <a class="header-logo" href="index.html" aria-label="ZEEKR Paraguay — Inicio"><svg class="logo" viewBox="0 0 80 80" fill="currentColor" aria-hidden="true"><circle cx="40" cy="40" r="40"/><path fill-rule="evenodd" fill="#0F0F0F" d="M13.3 10.7h22.2l-.05 34.6H13.3V34.4h10.4v-2.6H13.3V10.7Zm45.4 51.3H14.7L47 44.4l11.7 17.6Zm8-2H54.8l-.1-49.3h12V60Zm-12-49.3h12v38l-12 11.3Z"/></svg></a>
+      <nav class="header-menus" aria-label="Principal">
+        <button class="menu-link models-trigger menu-link active" type="button" aria-expanded="false" aria-controls="modelsPanel" data-toggle-models>Modelos</button>
+        <a class="menu-link" href="nosotros.html">Nosotros</a>
+        <a class="menu-link" href="noticias.html">Noticias</a>
+        <a class="menu-link" href="#contacto-footer">Servicio</a>
+      </nav>
+    </div>
+    <a class="header-wordmark" href="index.html" aria-label="ZEEKR Paraguay — Inicio">ZEEKR</a>
     <div class="header-right">
-      <span class="header-locale">Paraguay&nbsp;/&nbsp;Español</span>
-      <button class="btn btn-outline-light btn-sm" type="button" data-open-contact>Contacto</button>
+      <a class="menu-link" href="#" data-open-contact>Prueba de manejo</a>
+      <a class="menu-link" href="#" data-open-contact>Contáctanos</a>
+      <a class="menu-link" href="nosotros.html">Distribuidores</a>
+      <span class="header-locale"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 12h18M12 3c3 3.5 3 14 0 18M12 3c-3 3.5-3 14 0 18" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>&nbsp;Paraguay/Español</span>
       <button class="burger" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobileMenu" data-open-menu>
         <span></span><span></span>
       </button>
+    </div>
+  </div>
+  <div class="models-panel" id="modelsPanel" hidden>
+    <div class="models-panel-inner">
+      <p class="models-heading">Modelos</p>
+            <a class="gate-card" href="zeekr001.html">
+        <img src="images/menu/zeekr_001.png" alt="ZEEKR 001" width="300" height="150">
+        <span>ZEEKR 001</span>
+      </a>
+      <a class="gate-card" href="zeekrx.html">
+        <img src="images/menu/zeekr_x.png" alt="ZEEKR X" width="300" height="150">
+        <span>ZEEKR X</span>
+      </a>
+      <a class="gate-card" href="zeekr7x.html">
+        <img src="images/menu/zeekr_7x.png" alt="ZEEKR 7X" width="300" height="150">
+        <span>ZEEKR 7X</span>
+      </a>
     </div>
   </div>
   <div class="mobile-menu" id="mobileMenu" hidden>
@@ -63,7 +84,22 @@
     <button class="btn btn-solid mobile-cta" data-open-contact>Contacto &amp; test drive</button>
   </div>
 </header>
-<div class="menu-overlay" data-close-menu hidden></div>
+<div class="nav-shade" data-close-models hidden></div>
+<div class="cookie-banner" id="cookieBanner" hidden role="dialog" aria-label="Consentimiento de cookies">
+  <p class="cookie-text">Cuando visita nuestro sitio web ("Plataformas Zeekr"), utilizamos cookies y otras tecnologías de seguimiento similares para mejorar la funcionalidad de las Plataformas Zeekr, el rendimiento, medir el tráfico del sitio web, analizar el comportamiento del usuario y ajustar nuestro contenido y servicios. Si hace clic en "Aceptar todo" nos autoriza a procesar sus datos personales para tales fines. Si hace clic en "Rechazar todo" sólo utilizaremos cookies y tecnología de rastreo que sean estrictamente necesarias para la funcionalidad de la Plataforma Zeekr. Para más información o para consentir cookies específicas y tecnología de rastreo por favor haga clic en Configuración de Cookies.</p>
+  <div class="cookie-actions">
+    <button class="btn btn-outline-dark" type="button" data-cookie-settings>Configuración de Cookies</button>
+    <button class="btn btn-dark" type="button" data-cookie-reject>Rechazar Todo</button>
+    <button class="btn btn-dark" type="button" data-cookie-accept>Aceptar Todo</button>
+  </div>
+  <div class="cookie-settings" id="cookieSettings" hidden>
+    <label><input type="checkbox" checked disabled> Necesarias (siempre activas)</label>
+    <label><input type="checkbox" id="ckAnalytics" checked> Analíticas y rendimiento</label>
+    <div class="cookie-actions">
+      <button class="btn btn-dark" type="button" data-cookie-save>Guardar preferencias</button>
+    </div>
+  </div>
+</div>
 <main id="main">
 
 <section class="hero-model">
@@ -218,6 +254,6 @@
     </form>
   </div>
 </div>
-<script src="js/main.js" defer></script>
+<script src="js/main.js?v=2" defer></script>
 </body>
 </html>

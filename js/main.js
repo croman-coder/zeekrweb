@@ -11,6 +11,49 @@
   window.addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
+  /* ----- panel de modelos ----- */
+  var modelsPanel = document.getElementById("modelsPanel");
+  var navShade = document.querySelector(".nav-shade");
+  var modelsTrigger = document.querySelector("[data-toggle-models]");
+  function toggleModels(open) {
+    if (!modelsPanel || !modelsTrigger) return;
+    modelsPanel.hidden = !open;
+    if (navShade) navShade.hidden = !open;
+    modelsTrigger.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-toggle-models]")) {
+      e.preventDefault();
+      toggleModels(modelsPanel.hidden);
+      return;
+    }
+    if (e.target.closest("[data-close-models]")) { toggleModels(false); return; }
+    if (modelsPanel && !modelsPanel.hidden && !e.target.closest("#modelsPanel") && !e.target.closest("[data-toggle-models]")) toggleModels(false);
+  });
+
+  /* ----- banner de cookies ----- */
+  var banner = document.getElementById("cookieBanner");
+  var ckSettings = document.getElementById("cookieSettings");
+  var CK_KEY = "zeekr-consent";
+  function readConsent() {
+    try { return JSON.parse(localStorage.getItem(CK_KEY) || "null"); } catch (e) { return null; }
+  }
+  function saveConsent(analytics) {
+    try { localStorage.setItem(CK_KEY, JSON.stringify({ necessary: true, analytics: !!analytics, at: Date.now() })); } catch (e) {}
+    if (banner) banner.hidden = true;
+    if (ckSettings) ckSettings.hidden = true;
+  }
+  if (banner && !readConsent()) banner.hidden = false;
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-cookie-accept]")) { saveConsent(true); return; }
+    if (e.target.closest("[data-cookie-reject]")) { saveConsent(false); return; }
+    if (e.target.closest("[data-cookie-settings]") && ckSettings) { ckSettings.hidden = false; return; }
+    if (e.target.closest("[data-cookie-save]")) {
+      var an = document.getElementById("ckAnalytics");
+      saveConsent(an ? an.checked : false);
+    }
+  });
+
   /* ----- hero slider / pager ----- */
   var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
   var bars = Array.prototype.slice.call(document.querySelectorAll(".pager-bar"));

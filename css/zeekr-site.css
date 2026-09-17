@@ -32,10 +32,36 @@ button{font-family:inherit}
 .site-header{position:fixed;inset:0 0 auto 0;z-index:100;color:var(--ink);transition:background-color .3s ease,box-shadow .3s ease}
 .site-header.scrolled{background:#fff;color:#161616;box-shadow:0 1px 0 rgba(36,41,43,.08)}
 .header-inner{position:relative;display:flex;align-items:center;justify-content:space-between;height:var(--header-h);max-width:1920px;margin:0 auto;padding:0 24px}
-.header-left,.header-right{display:flex;align-items:center;gap:26px}
-.menu-link{font-size:14px;letter-spacing:.04em;text-transform:uppercase;padding:4px 0;border-bottom:1px solid transparent;white-space:nowrap}
+.header-left{display:flex;align-items:center;gap:26px}
+.header-right{display:flex;align-items:center;gap:22px}
+.menu-link{font-size:14.5px;letter-spacing:.02em;text-transform:none;padding:4px 0;border-bottom:1px solid transparent;white-space:nowrap;background:none;border-top:0;border-left:0;border-right:0;color:inherit;cursor:pointer;font-family:inherit}
 .menu-link:hover,.menu-link.active{border-bottom-color:var(--accent)}
-.header-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:inherit}
+.header-logo{color:inherit;margin-right:18px}
+.header-wordmark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--font-head);font-size:24px;letter-spacing:.42em;text-indent:.42em;color:inherit}
+.header-locale{font-size:13px;color:inherit;opacity:.85;letter-spacing:.03em;display:inline-flex;align-items:center;gap:5px}
+.header-locale svg{width:17px;height:17px}
+.models-panel{position:fixed;top:var(--header-h);left:0;right:0;z-index:95;background:#fff;color:#161616;box-shadow:0 24px 48px rgba(0,0,0,.28)}
+.models-panel[hidden]{display:none}
+.models-panel-inner{display:grid;grid-template-columns:220px 1fr 1fr 1fr;gap:0;align-items:end;max-width:1440px;margin:0 auto;padding:34px 32px 40px}
+.models-heading{font-family:var(--font-head);font-size:clamp(26px,3vw,38px);color:#161616;align-self:center}
+.gate-card{display:flex;flex-direction:column;align-items:center;gap:14px;text-decoration:none;color:#161616;padding:6px 10px 0}
+.gate-card img{width:min(240px,80%);height:132px;object-fit:contain;transition:transform .3s ease}
+.gate-card:hover img{transform:translateY(-4px)}
+.gate-card span{font-size:16px;letter-spacing:.04em;font-family:var(--font-head);text-transform:uppercase}
+.nav-shade{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90}
+.nav-shade[hidden]{display:none}
+.cookie-banner{position:fixed;left:0;right:0;bottom:0;z-index:140;background:#fff;color:#161616;padding:18px 40px 22px;box-shadow:0 -6px 24px rgba(0,0,0,.25)}
+.cookie-banner[hidden]{display:none}
+.cookie-text{font-size:12.5px;line-height:1.55;color:#333;max-width:1500px}
+.cookie-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px}
+.cookie-actions .btn{min-height:46px}
+.btn-dark{background:#0F0F0F;border-color:#0F0F0F;color:#fff}
+.btn-dark:hover{background:#333;border-color:#333}
+.btn-outline-dark{border-color:#161616;color:#161616}
+.btn-outline-dark:hover{background:#161616;color:#fff}
+.cookie-settings{margin-top:14px;border-top:1px solid #ddd;padding-top:14px;display:flex;flex-wrap:wrap;gap:18px;align-items:center}
+.cookie-settings label{font-size:13.5px;display:inline-flex;gap:8px;align-items:center}
+.cookie-settings[hidden]{display:none}
 .logo{width:34px;height:34px;color:currentColor}
 .header-locale{font-size:13px;color:inherit;opacity:.75;letter-spacing:.03em}
 .burger{display:none;flex-direction:column;justify-content:center;gap:6px;width:40px;height:40px;background:none;border:0;cursor:pointer;padding:8px}
@@ -201,7 +227,12 @@ table.spec td.k{color:var(--ink-70);width:38%}
 @media (max-width:991px){
   .header-locale{display:none}
   .header-menus{display:none}
+  .header-wordmark{position:static;transform:none}
+  .header-right .menu-link{display:none}
   .burger{display:flex}
+  .models-panel{display:none}
+  .cookie-banner{padding:14px 18px 18px}
+  .cookie-actions{grid-template-columns:1fr}
   .slide-buttons{grid-template-columns:1fr;width:min(440px,100%)}
   .news-grid{grid-template-columns:1fr 1fr;overflow-x:auto}
   .news-grid::-webkit-scrollbar{display:none}

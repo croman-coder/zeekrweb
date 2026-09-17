@@ -77,24 +77,44 @@ NEWS = [
 
 def header(active, root=""):
     def cls(a): return "menu-link active" if a == active else "menu-link"
+    gates = [
+        ("001", "ZEEKR 001", f"{root}zeekr001.html", f"{root}images/menu/zeekr_001.png"),
+        ("x", "ZEEKR X", f"{root}zeekrx.html", f"{root}images/menu/zeekr_x.png"),
+        ("7x", "ZEEKR 7X", f"{root}zeekr7x.html", f"{root}images/menu/zeekr_7x.png"),
+    ]
+    items = "\n".join(
+        f"""      <a class="gate-card" href="{href}">
+        <img src="{img}" alt="{name}" width="300" height="150">
+        <span>{name}</span>
+      </a>""" for a, name, href, img in gates)
     return f"""
 <a class="skip-link" href="#main">Saltar al contenido</a>
 <header class="site-header" id="siteHeader">
   <div class="header-inner">
-    <nav class="header-menus header-left" aria-label="Modelos">
-      <a class="{cls('001')}" href="{root}zeekr001.html">ZEEKR 001</a>
-      <a class="{cls('x')}" href="{root}zeekrx.html">ZEEKR X</a>
-      <a class="{cls('7x')}" href="{root}zeekr7x.html">ZEEKR 7X</a>
-      <a class="{cls('noticias')}" href="{root}noticias.html">Noticias</a>
-      <a class="{cls('nosotros')}" href="{root}nosotros.html">Nosotros</a>
-    </nav>
-    <a class="header-logo" href="{root}index.html" aria-label="ZEEKR Paraguay — Inicio">{LOGO_SVG}</a>
+    <div class="header-left">
+      <a class="header-logo" href="{root}index.html" aria-label="ZEEKR Paraguay — Inicio">{LOGO_SVG}</a>
+      <nav class="header-menus" aria-label="Principal">
+        <button class="menu-link models-trigger {cls(active) if active else ''}" type="button" aria-expanded="false" aria-controls="modelsPanel" data-toggle-models>Modelos</button>
+        <a class="{cls('nosotros')}" href="{root}nosotros.html">Nosotros</a>
+        <a class="{cls('noticias')}" href="{root}noticias.html">Noticias</a>
+        <a class="menu-link" href="#contacto-footer">Servicio</a>
+      </nav>
+    </div>
+    <a class="header-wordmark" href="{root}index.html" aria-label="ZEEKR Paraguay — Inicio">ZEEKR</a>
     <div class="header-right">
-      <span class="header-locale">Paraguay&nbsp;/&nbsp;Español</span>
-      <button class="btn btn-outline-light btn-sm" type="button" data-open-contact>Contacto</button>
+      <a class="menu-link" href="#" data-open-contact>Prueba de manejo</a>
+      <a class="menu-link" href="#" data-open-contact>Contáctanos</a>
+      <a class="menu-link" href="{root}nosotros.html">Distribuidores</a>
+      <span class="header-locale"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 12h18M12 3c3 3.5 3 14 0 18M12 3c-3 3.5-3 14 0 18" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>&nbsp;Paraguay/Español</span>
       <button class="burger" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobileMenu" data-open-menu>
         <span></span><span></span>
       </button>
+    </div>
+  </div>
+  <div class="models-panel" id="modelsPanel" hidden>
+    <div class="models-panel-inner">
+      <p class="models-heading">Modelos</p>
+      {items}
     </div>
   </div>
   <div class="mobile-menu" id="mobileMenu" hidden>
@@ -113,7 +133,22 @@ def header(active, root=""):
     <button class="btn btn-solid mobile-cta" data-open-contact>Contacto &amp; test drive</button>
   </div>
 </header>
-<div class="menu-overlay" data-close-menu hidden></div>"""
+<div class="nav-shade" data-close-models hidden></div>
+<div class="cookie-banner" id="cookieBanner" hidden role="dialog" aria-label="Consentimiento de cookies">
+  <p class="cookie-text">Cuando visita nuestro sitio web ("Plataformas Zeekr"), utilizamos cookies y otras tecnologías de seguimiento similares para mejorar la funcionalidad de las Plataformas Zeekr, el rendimiento, medir el tráfico del sitio web, analizar el comportamiento del usuario y ajustar nuestro contenido y servicios. Si hace clic en "Aceptar todo" nos autoriza a procesar sus datos personales para tales fines. Si hace clic en "Rechazar todo" sólo utilizaremos cookies y tecnología de rastreo que sean estrictamente necesarias para la funcionalidad de la Plataforma Zeekr. Para más información o para consentir cookies específicas y tecnología de rastreo por favor haga clic en Configuración de Cookies.</p>
+  <div class="cookie-actions">
+    <button class="btn btn-outline-dark" type="button" data-cookie-settings>Configuración de Cookies</button>
+    <button class="btn btn-dark" type="button" data-cookie-reject>Rechazar Todo</button>
+    <button class="btn btn-dark" type="button" data-cookie-accept>Aceptar Todo</button>
+  </div>
+  <div class="cookie-settings" id="cookieSettings" hidden>
+    <label><input type="checkbox" checked disabled> Necesarias (siempre activas)</label>
+    <label><input type="checkbox" id="ckAnalytics" checked> Analíticas y rendimiento</label>
+    <div class="cookie-actions">
+      <button class="btn btn-dark" type="button" data-cookie-save>Guardar preferencias</button>
+    </div>
+  </div>
+</div>"""
 
 
 def footer(root=""):
@@ -216,7 +251,7 @@ def head_block(title, desc, canonical, jsonld, root="", og_img="images/og.jpg", 
   <meta name="twitter:description" content="{desc}">
   <meta name="twitter:image" content="{DOMAIN}/{og_img}">
   <link rel="icon" href="{root}favicon.png">
-  <link rel="stylesheet" href="{root}css/zeekr-site.css">
+  <link rel="stylesheet" href="{root}css/zeekr-site.css?v=2">
   {f'<link rel="preload" as="image" href="{preload}" media="(min-width:768px)">' if preload else ''}
   <script type="application/ld+json">{json.dumps(jsonld, ensure_ascii=False) if not isinstance(jsonld, str) else jsonld}</script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-E6H9ZC5CG3"></script>
@@ -237,7 +272,7 @@ def render_page(fname, title, desc, canonical, content, nav_active, jsonld="", r
 {content}
 </main>
 {footer(root)}
-<script src="{root}js/main.js" defer></script>
+<script src="{root}js/main.js?v=2" defer></script>
 </body>
 </html>"""
     open(fname, "w").write(html)
