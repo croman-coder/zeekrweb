@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://zeekrlife.com.py/sitemap.xml

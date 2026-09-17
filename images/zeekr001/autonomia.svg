@@ -1,0 +1,19 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_32_387)">
+<path opacity="0.25" d="M32 54C44.1503 54 54 44.1503 54 32C54 19.8497 44.1503 10 32 10C19.8497 10 10 19.8497 10 32C10 44.1503 19.8497 54 32 54Z" stroke="white"/>
+<path opacity="0.25" d="M32 44.6667C38.9956 44.6667 44.6666 38.9956 44.6666 32C44.6666 25.0044 38.9956 19.3334 32 19.3334C25.0044 19.3334 19.3333 25.0044 19.3333 32C19.3333 38.9956 25.0044 44.6667 32 44.6667Z" stroke="white"/>
+<path d="M32 28C34.2091 28 36 29.7909 36 32C36 34.2091 34.2091 36 32 36C29.7909 36 28 34.2091 28 32C28 29.7909 29.7909 28 32 28Z" fill="white"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M62.6667 31.9999C62.6667 48.9366 48.9367 62.6666 32 62.6666C15.0633 62.6666 1.33333 48.9366 1.33333 31.9999C1.33333 16.4188 12.9533 3.55173 28 1.59171V0.247437C12.2148 2.21583 0 15.6814 0 31.9999C0 49.673 14.3269 63.9999 32 63.9999C49.6731 63.9999 64 49.673 64 31.9999C64 15.6814 51.7852 2.21583 36 0.247437V1.59171C51.0468 3.55173 62.6667 16.4188 62.6667 31.9999Z" fill="white"/>
+<path d="M32 32V0" stroke="white"/>
+<path opacity="0.3" fill-rule="evenodd" clip-rule="evenodd" d="M32 0V32H64C64 14.3269 49.6731 0 32 0Z" fill="url(#paint0_linear_32_387)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_32_387" x1="32" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="white" stop-opacity="0"/>
+</linearGradient>
+<clipPath id="clip0_32_387">
+<rect width="64" height="64" fill="white"/>
+</clipPath>
+</defs>
+</svg>
