@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<url><loc>https://zeekrlife.com.py/</loc><lastmod>2026-09-17</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
-<url><loc>https://zeekrlife.com.py/zeekr001.html</loc><lastmod>2026-09-17</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-<url><loc>https://zeekrlife.com.py/zeekrx.html</loc><lastmod>2026-09-17</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-<url><loc>https://zeekrlife.com.py/zeekr7x.html</loc><lastmod>2026-09-17</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
-<url><loc>https://zeekrlife.com.py/noticias.html</loc><lastmod>2026-09-17</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-<url><loc>https://zeekrlife.com.py/nosotros.html</loc><lastmod>2026-09-17</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://zeekrlife.com.py/</loc><lastmod>2026-09-18</lastmod></url>
+  <url><loc>https://zeekrlife.com.py/modelos/</loc><lastmod>2026-09-18</lastmod></url>
+  <url><loc>https://zeekrlife.com.py/modelos/zeekr-7x/</loc><lastmod>2026-09-18</lastmod></url>
+  <url><loc>https://zeekrlife.com.py/modelos/zeekr-x/</loc><lastmod>2026-09-18</lastmod></url>
+  <url><loc>https://zeekrlife.com.py/modelos/zeekr-001/</loc><lastmod>2026-09-18</lastmod></url>
+  <url><loc>https://zeekrlife.com.py/noticias/</loc><lastmod>2026-09-18</lastmod></url>
+  <url><loc>https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/</loc><lastmod>2026-07-28</lastmod></url>
+  <url><loc>https://zeekrlife.com.py/nosotros/</loc><lastmod>2026-09-18</lastmod></url>
 </urlset>
