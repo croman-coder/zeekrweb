@@ -304,6 +304,14 @@ main:focus{outline:none}
 .form-status{font-size:14px;color:var(--rock);min-height:1em;margin-top:-4px}
 .form-status:empty{display:none}
 .form-note{font-size:12px;line-height:1.5;color:var(--grey)}
+.hp{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.form-success{display:grid;gap:14px;justify-items:start;padding-top:8px;animation:modalIn .4s var(--ease)}
+.form-success[hidden]{display:none}
+.success-icon{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#0A0A0A;color:var(--ink)}
+.success-icon svg{width:28px;height:28px}
+.form-success h3{font-size:clamp(24px,2.6vw,30px);color:#0A0A0A}
+.form-success p{color:var(--grey);line-height:1.6}
+.success-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
 
 /* ---------- páginas de modelo ---------- */
 .hero-model{position:relative;min-height:min(92svh,1000px);display:grid;align-items:end;overflow:hidden;background:var(--black-2)}
@@ -472,6 +480,15 @@ body:not(.has-hero) main{padding-top:var(--header-h)}
   .cookie-actions{grid-template-columns:1fr}
   .cookie-actions .btn:first-child{grid-column:auto}
   .gallery-item{flex-basis:80vw}
+}
+@media (max-width:420px){
+  .hero-ui{gap:8px;padding-left:16px;padding-right:16px}
+  .hero-ctl{width:40px;height:40px}
+  .hero-controls{gap:6px}
+  .pager-bar{width:40px}
+}
+@media (max-width:360px){
+  .hero-controls [data-prev],.hero-controls [data-next]{display:none}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}

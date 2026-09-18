@@ -516,10 +516,20 @@ def contact_modal():
         <label for="cf-msg">Mensaje <span class="opt">(opcional)</span></label>
         <textarea id="cf-msg" name="mensaje" rows="2" autocomplete="off" placeholder="Contanos qué te interesa…"></textarea>
       </div>
-      <button class="btn btn-accent btn-block" type="submit"><span>Enviar por WhatsApp</span>{ICON_WA}</button>
+      <div class="hp" aria-hidden="true"><label for="cf-web">Sitio web</label><input id="cf-web" type="text" name="website" tabindex="-1" autocomplete="off"></div>
+      <button class="btn btn-accent btn-block" type="submit" data-label="Enviar consulta"><span>Enviar consulta</span>{ICON_ARROW}</button>
       <p class="form-status" role="status" aria-live="polite"></p>
-      <p class="form-note">Al enviar se abre WhatsApp con tu mensaje listo. Al enviarlo aceptás que ZEEKR Paraguay procese tus datos para gestionar tu consulta.</p>
+      <p class="form-note">Un asesor ZEEKR te contacta en el día. Al enviar aceptás que ZEEKR Paraguay procese tus datos para gestionar tu consulta.</p>
     </form>
+    <div class="form-success" hidden>
+      <div class="success-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h3>¡Listo, <span data-success-name></span>!</h3>
+      <p>Registramos tu consulta. <span data-success-advisor></span></p>
+      <div class="success-actions">
+        <a class="btn btn-accent" href="#" target="_blank" rel="noopener" data-success-wa><span>Continuar por WhatsApp</span>{ICON_WA}</a>
+        <button class="btn btn-outline-dark" type="button" data-close-contact>Cerrar</button>
+      </div>
+    </div>
   </div>
 </div>'''
 
@@ -1174,7 +1184,19 @@ def build_meta():
     sm.append("</urlset>")
     open("sitemap.xml", "w").write("\n".join(sm) + "\n")
     open("robots.txt", "w").write(f"User-agent: *\nAllow: /\nDisallow: /404.html\n\nSitemap: {DOMAIN}/sitemap.xml\n")
-    print("OK sitemap.xml robots.txt")
+    # Cloudflare Pages / Netlify: mismas redirecciones y cabeceras que nginx.conf
+    legacy = [("/index.html", "/"), ("/zeekr001.html", "/modelos/zeekr-001/"), ("/zeekrx.html", "/modelos/zeekr-x/"),
+              ("/zeekr7x.html", "/modelos/zeekr-7x/"), ("/noticias.html", "/noticias/"), ("/nosotros.html", "/nosotros/")]
+    lines = [f"{a} {b} 301" for a, b in legacy] + [f"https://www.{DOMAIN.split('//')[1]}/* {DOMAIN}/:splat 301"]
+    open("_redirects", "w").write("\n".join(lines) + "\n")
+    sec = ["  X-Content-Type-Options: nosniff", "  X-Frame-Options: SAMEORIGIN",
+           "  Referrer-Policy: strict-origin-when-cross-origin", "  Permissions-Policy: camera=(), microphone=(), geolocation=()"]
+    hdr = ["/*", *sec, "/images/*", "  Cache-Control: public, max-age=2592000, immutable", "/fonts/*",
+           "  Cache-Control: public, max-age=31536000, immutable", "/css/*", "  Cache-Control: public, max-age=2592000, immutable",
+           "/js/*", "  Cache-Control: public, max-age=2592000, immutable", "/icons/*", "  Cache-Control: public, max-age=2592000, immutable",
+           "/api/*", "  Cache-Control: no-store"]
+    open("_headers", "w").write("\n".join(hdr) + "\n")
+    print("OK sitemap.xml robots.txt _redirects _headers")
 
 
 def cleanup_legacy():
