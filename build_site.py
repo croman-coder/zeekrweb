@@ -298,9 +298,11 @@ NEWS = [
     {
         "slug": "lanzamiento-zeekr-7x-alma",
         "date": "2026-07-28",
-        "kicker": "Evento · Lanzamiento",
+        "kicker": "Evento · Asunción",
         "title": "ZEEKR 7X: así fue su lanzamiento en Paraguay",
-        "lead": "Santa Rosa Paraguay presentó oficialmente el ZEEKR 7X en una noche exclusiva en Alma, con invitados, prensa y el nuevo SUV eléctrico de próxima generación como protagonista.",
+        "lead": "Santa Rosa Paraguay presentó oficialmente el ZEEKR 7X en una noche exclusiva en Alma, Asunción, con invitados, prensa y el nuevo SUV eléctrico de próxima generación como protagonista.",
+        "place": "Alma, Asunción",
+        "quote": ("Paraguay tiene un enorme potencial; su dinamismo económico lo convierte en un escenario ideal para adoptar nuevas tecnologías en movilidad.", "Manuel Antelo", "Grupo Antelo"),
         "img": "images/noticias/alma-2026/01-zeekr-7x-alma.jpg",
         "body": [
             "La velada reunió a clientes, aliados y medios de comunicación en un espacio pensado para vivir la marca de cerca: diseño escandinavo, tecnología de vanguardia y la experiencia ZEEKR en primera persona.",
@@ -1086,7 +1088,11 @@ def page_article(n):
     url = news_url(n)
     m = MODELS.get(n.get("cta_model"))
     cover = picture(n["img"], n["title"], (960, 1600, 2400), sizes="100vw", cls="article-cover", loading="eager", fetchpriority="high")
-    body = "".join(f"<p>{p}</p>" for p in n["body"])
+    paras = [f"<p>{p}</p>" for p in n["body"]]
+    if n.get("quote"):
+        q, who, org = n["quote"]
+        paras.insert(2, f'<blockquote class="article-quote"><p>“{q}”</p><footer><cite>{who}</cite> · {org}</footer></blockquote>')
+    body = "".join(paras)
     gallery = ""
     if n.get("gallery"):
         figs = "".join(f'<figure class="masonry-item reveal">{picture(src, alt, (480, 800, 1200), sizes="(min-width:992px) 33vw, (min-width:600px) 50vw, 100vw")}<figcaption>{alt}</figcaption></figure>' for src, alt in n["gallery"])
@@ -1124,6 +1130,7 @@ def page_article(n):
     article = {"@type": "NewsArticle", "headline": n["title"], "description": n["lead"], "datePublished": n["date"], "dateModified": n["date"],
                "inLanguage": "es-PY", "url": DOMAIN + url, "mainEntityOfPage": DOMAIN + url, "image": images,
                "articleSection": "Eventos", "author": {"@id": DOMAIN + "/#org"}, "publisher": {"@id": DOMAIN + "/#org"},
+               **({"contentLocation": {"@type": "Place", "name": n["place"], "address": {"@type": "PostalAddress", "addressLocality": "Asunción", "addressCountry": "PY"}}} if n.get("place") else {}),
                "about": [{"@type": "Car", "name": m["name"], "brand": {"@type": "Brand", "name": "ZEEKR"}}] if m else []}
     jsonld = graph(article, breadcrumb([("Inicio", "/"), ("Noticias", "/noticias/"), (n["title"], url)]))
     render_page(url, f"{n['title']} — ZEEKR Paraguay", n["lead"], content, "noticias", jsonld,
