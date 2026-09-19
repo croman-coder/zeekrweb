@@ -104,7 +104,7 @@ Accesibilidad **100**, Best Practices **100**. SEO Lighthouse = 69 en el alias p
 
 ---
 
-### Corregido durante la auditoría (commits `78c865d`, `e5…`)
+### Corregido durante la auditoría (commits `78c865d` y `b8f8036`)
 metas/títulos · charset · HSTS · CSP · noindex alias · llms.txt · `_headers` Pages · CSP compatible con GA4 y Cloudflare Web Analytics.
 
 ### Pendiente (requiere datos o accesos de Croman)
