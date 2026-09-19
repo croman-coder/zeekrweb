@@ -15,12 +15,12 @@ Que los equipos de cada marca (@santarosa.com.py) editen su sitio sin tocar cód
 | Crean los editores | Noticias/eventos y modelos nuevos (no traducciones) |
 | Traducciones | IA (Claude) al publicar, solo lo nuevo/cambiado, con glosario; editor puede corregir |
 | Email saliente | Google Workspace SMTP con contraseña de aplicación (reset e invitaciones) |
-| Arquitectura | **Directus** (CMS headless self-hosted en Coolify) + servicio **builder** (Python) que corre `build_site.py` y publica en un volumen que sirve nginx |
+| Arquitectura | **Directus** (CMS headless self-hosted en Coolify, SQLite) + servicio **builder** (Python) que corre `build_site.py` y publica en un volumen que sirve nginx |
 
 ## 3. Arquitectura
 
 ```
-Editores ──► https://admin.santarosa.lat  (Directus 11 + Postgres 16, Coolify)
+Editores ──► https://admin.santarosa.lat  (Directus 11 + SQLite, Coolify)
                  │ uploads en volumen /directus/uploads
                  │ Flow "Vista previa" / "Publicar" / "Volver atrás" → webhook (token)
                  ▼
@@ -108,11 +108,11 @@ Reglas de negocio: `status` en draft/published/archived; la vista previa incluye
 
 | App | Stack | Notas |
 |---|---|---|
-| `directus` | Docker Compose: `directus/directus:11`, `postgres:16-alpine` | volúmenes `directus_uploads`, `directus_db`; env `KEY`, `SECRET`, `PUBLIC_URL`, `ADMIN_EMAIL/PASSWORD` (inicial), `EMAIL_TRANSPORT=smtp` (smtp.gmail.com:465, app password), `PASSWORD_RESET_URL_ALLOW_LIST`, `USER_INVITE_URL_ALLOW_LIST`, `RATE_LIMITER_ENABLED=true`, `CORS_ORIGIN` |
+| `directus` | Imagen `directus/directus:11` con **SQLite** (`DB_CLIENT=sqlite3`), sin Postgres | volúmenes `directus_database`, `directus_uploads`, `directus_extensions`; env `KEY`, `SECRET`, `PUBLIC_URL`, `ADMIN_EMAIL/PASSWORD` (inicial), `EMAIL_TRANSPORT=smtp` (smtp.gmail.com:465, app password), `PASSWORD_RESET_URL_ALLOW_LIST`, `USER_INVITE_URL_ALLOW_LIST`, `RATE_LIMITER_ENABLED=true`, `CORS_ORIGIN` |
 | `zeekr-builder` | Dockerfile Python 3.12 (Pillow, FastAPI, httpx, git) | env `DIRECTUS_URL`, `DIRECTUS_TOKEN`, `BUILDER_TOKEN`, `ANTHROPIC_API_KEY`, `SITES_ROOT=/srv/sites`; volumen `sites` |
 | `zeekr-web` | nginx (existente) | `root /srv/sites/zeekr/current` (volumen `sites`, ro); bloque `server_name preview-zeekr.santarosa.lat` → `/srv/sites/zeekr/preview` + noindex |
 | Cloudflared | ingress | `admin.santarosa.lat`, `preview-zeekr.santarosa.lat` → `coolify-proxy:80` |
-| Backups | cron en servidor | `pg_dump` nocturno + rsync de uploads a la rutina de backup existente |
+| Backups | cron en servidor | copia nocturna de `data.db` (sqlite `.backup`) + rsync de uploads a la rutina de backup existente |
 
 Esquema de Directus versionado en el repo (`cms/schema.yaml`, `directus schema apply`) y Flows exportados (`cms/flows.json`) para reproducir el panel en otro servidor (plan B).
 
