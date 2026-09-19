@@ -201,22 +201,23 @@ def render_logo_png(size, fg, bg, pad_ratio=0.22):
 
 def build_icons():
     os.makedirs("icons", exist_ok=True)
-    cream = (255, 244, 226, 255)
     black = (10, 10, 10, 255)
-    render_logo_png(180, cream, black).convert("RGB").save("icons/apple-touch-icon.png", optimize=True)
-    render_logo_png(192, cream, black).save("icons/icon-192.png", optimize=True)
-    render_logo_png(512, cream, black).save("icons/icon-512.png", optimize=True)
-    render_logo_png(512, cream, black, pad_ratio=0.3).save("icons/icon-512-maskable.png", optimize=True)
-    fav32 = render_logo_png(32, cream, black, pad_ratio=0.16)
+    white = (255, 255, 255, 255)
+    clear = (0, 0, 0, 0)
+    # Favicon: isotipo negro sobre transparente (como la marca)
+    render_logo_png(180, black, white).convert("RGB").save("icons/apple-touch-icon.png", optimize=True)
+    render_logo_png(192, black, white).convert("RGB").save("icons/icon-192.png", optimize=True)
+    render_logo_png(512, black, white).convert("RGB").save("icons/icon-512.png", optimize=True)
+    render_logo_png(512, black, white, pad_ratio=0.3).convert("RGB").save("icons/icon-512-maskable.png", optimize=True)
+    fav32 = render_logo_png(32, black, clear, pad_ratio=0.03)
     fav32.save("icons/favicon-32.png", optimize=True)
     fav32.save("favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)])
     open("favicon.svg", "w").write(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28">'
-        '<style>path{fill:#0A0A0A}@media(prefers-color-scheme:dark){path{fill:#FFF4E2}}</style>'
-        f'<path d="{LOGO_PATH}"/></svg>\n')
+        f'<path fill="#0A0A0A" d="{LOGO_PATH}"/></svg>\n')
     manifest = {
         "name": "ZEEKR Paraguay", "short_name": "ZEEKR PY", "start_url": "/", "display": "browser",
-        "background_color": "#0A0A0A", "theme_color": "#0A0A0A", "lang": "es-PY",
+        "background_color": "#FFFFFF", "theme_color": "#0A0A0A", "lang": "es-PY",
         "icons": [
             {"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
             {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
@@ -376,15 +377,12 @@ def header(active=""):
         <button class="menu-link models-trigger {cls('modelos')}" type="button" aria-expanded="false" aria-controls="modelsPanel" data-toggle-models>Modelos</button>
         <a class="{cls('nosotros')}" href="/nosotros/">Nosotros</a>
         <a class="{cls('noticias')}" href="/noticias/">Noticias</a>
-        <a class="menu-link" href="#contacto">Servicio</a>
       </nav>
     </div>
     <a class="header-wordmark" href="/" aria-label="ZEEKR Paraguay — Inicio">{WORDMARK_SVG}</a>
     <div class="header-right">
-      <button class="menu-link" type="button" data-open-contact>Prueba de manejo</button>
-      <button class="menu-link" type="button" data-open-contact>Contáctanos</button>
+      <button class="menu-link" type="button" data-open-contact data-intent="contacto">Contáctanos</button>
       <a class="header-wa" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" aria-label="WhatsApp ZEEKR Paraguay">{ICON_WA}</a>
-      <span class="header-locale" translate="no"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 12h18M12 3c3 3.5 3 14 0 18M12 3c-3 3.5-3 14 0 18" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Paraguay / Español</span>
       <button class="burger" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobileMenu" data-open-menu><span></span><span></span></button>
     </div>
   </div>
@@ -412,8 +410,8 @@ def header(active=""):
       <a data-close-menu href="/nosotros/">Nosotros</a>
     </nav>
     <div class="mm-actions">
-      {btn("Agendá tu test drive", kind="accent", attrs=" data-open-contact")}
-      {btn("WhatsApp", href=f"https://wa.me/{WA_NUMBER}", kind="outline", icon=ICON_WA, attrs=' target="_blank" rel="noopener"')}
+      {btn("Agendá tu prueba de manejo", kind="accent", attrs=' data-open-contact data-intent="test-drive"')}
+      {btn("Contáctanos", kind="outline", attrs=' data-open-contact data-intent="contacto"')}
     </div>
   </div>
 </header>
@@ -458,8 +456,8 @@ def footer():
       <ul>
         <li><a href="/nosotros/">Nosotros</a></li>
         <li><a href="/noticias/">Noticias</a></li>
-        <li><button type="button" class="link-btn" data-open-contact>Contáctanos</button></li>
-        <li><button type="button" class="link-btn" data-open-contact>Prueba de manejo</button></li>
+        <li><button type="button" class="link-btn" data-open-contact data-intent="contacto">Contáctanos</button></li>
+        <li><button type="button" class="link-btn" data-open-contact data-intent="test-drive">Prueba de manejo</button></li>
       </ul>
     </nav>
     <div class="footer-col">
@@ -493,13 +491,19 @@ def contact_modal():
     return f'''
 <div class="modal-contact" id="contactModal" hidden role="dialog" aria-modal="true" aria-labelledby="cmTitle">
   <div class="modal-mask" data-close-contact></div>
-  <div class="modal-panel" tabindex="-1">
+  <div class="modal-panel" tabindex="-1" data-mode="test-drive">
     <button class="modal-close" type="button" aria-label="Cerrar" data-close-contact><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
-    <p class="eyebrow eyebrow-dark">Contacto</p>
-    <h2 id="cmTitle">Agendá tu prueba de manejo</h2>
-    <p class="modal-sub">Escribinos y un asesor te responde en el día.</p>
-    <div class="contact-cards">{cards}</div>
+    <p class="eyebrow eyebrow-dark" data-m="eyebrow">Prueba de manejo</p>
+    <h2 id="cmTitle" data-m="title">Agendá tu prueba de manejo</h2>
+    <p class="modal-sub" data-m="sub">Elegí el modelo y un asesor coordina con vos día, hora y lugar.</p>
+    <div class="modal-channels">
+      <p class="modal-or" data-m="channels">¿Preferís hablar ahora?</p>
+      <div class="contact-cards">{cards}</div>
+      <a class="btn btn-outline-dark btn-block" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" data-m-wa><span>Escribinos por WhatsApp</span>{ICON_WA}</a>
+    </div>
+    <p class="modal-or modal-or-form" data-m="form" hidden>O dejanos tu consulta y te llamamos</p>
     <form id="waForm" class="contact-form" data-wa="{WA_NUMBER}" novalidate>
+      <input type="hidden" name="tipo" value="Prueba de manejo">
       <div class="field">
         <label for="cf-nombre">Nombre y apellido</label>
         <input id="cf-nombre" type="text" name="nombre" required autocomplete="name" placeholder="Ej.: Ana Martínez">
@@ -519,14 +523,14 @@ def contact_modal():
         <textarea id="cf-msg" name="mensaje" rows="2" autocomplete="off" placeholder="Contanos qué te interesa…"></textarea>
       </div>
       <div class="hp" aria-hidden="true"><label for="cf-web">Sitio web</label><input id="cf-web" type="text" name="website" tabindex="-1" autocomplete="off"></div>
-      <button class="btn btn-accent btn-block" type="submit" data-label="Enviar consulta"><span>Enviar consulta</span>{ICON_ARROW}</button>
+      <button class="btn btn-accent btn-block" type="submit" data-label="Agendar prueba de manejo"><span>Agendar prueba de manejo</span>{ICON_ARROW}</button>
       <p class="form-status" role="status" aria-live="polite"></p>
       <p class="form-note">Un asesor ZEEKR te contacta en el día. Al enviar aceptás que ZEEKR Paraguay procese tus datos para gestionar tu consulta.</p>
     </form>
     <div class="form-success" hidden>
       <div class="success-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <h3>¡Listo, <span data-success-name></span>!</h3>
-      <p>Registramos tu consulta. <span data-success-advisor></span></p>
+      <p><span data-success-what>Registramos tu solicitud.</span> <span data-success-advisor></span></p>
       <div class="success-actions">
         <a class="btn btn-accent" href="#" target="_blank" rel="noopener" data-success-wa><span>Continuar por WhatsApp</span>{ICON_WA}</a>
         <button class="btn btn-outline-dark" type="button" data-close-contact>Cerrar</button>
@@ -673,7 +677,7 @@ def contact_strip(model_name=None):
       <p>Coordiná tu prueba de manejo con un asesor. Ventas: <a href="tel:+595971370006">0971&nbsp;370&nbsp;006</a> · <a href="tel:+595976979155">0976&nbsp;979&nbsp;155</a> · <a href="tel:+595976203280">0976&nbsp;203&nbsp;280</a> · Postventa: <a href="tel:+595974772247">0974&nbsp;772&nbsp;247</a></p>
     </div>
     <div class="contact-actions">
-      {btn("Agendá tu test drive", kind="accent", attrs=" data-open-contact" + attr)}
+      {btn("Agendá tu prueba de manejo", kind="accent", attrs=' data-open-contact data-intent="test-drive"' + attr)}
       {btn("Escribinos por WhatsApp", href=f"https://wa.me/{WA_NUMBER}", kind="outline", icon=ICON_WA, attrs=' target="_blank" rel="noopener"')}
     </div>
   </div>
@@ -712,7 +716,7 @@ def hero_slider():
         <p class="slide-claim">{m['claim']}</p>
         <div class="slide-actions">
           {btn(f"Conocé el {m['name']}", href=model_url(key), kind="accent")}
-          {btn("Agendá tu test drive", kind="cream", attrs=f' data-open-contact data-model="{m["name"]}"')}
+          {btn("Agendá tu prueba de manejo", kind="cream", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}
         </div>
       </div>
     </div>''')
@@ -725,9 +729,7 @@ def hero_slider():
     <p class="hero-counter" aria-hidden="true"><span data-counter>01</span><span class="hero-counter-sep">/</span>{n:02d}</p>
     <div class="hero-pager" role="group" aria-label="Diapositivas">{''.join(dots)}</div>
     <div class="hero-controls">
-      <button class="hero-ctl" type="button" data-prev aria-label="Diapositiva anterior">{ICON_CHEV_L}</button>
-      <button class="hero-ctl" type="button" data-toggle-play aria-label="Pausar reproducción automática" aria-pressed="false"><span class="ico-pause">{ICON_PAUSE}</span><span class="ico-play">{ICON_PLAY}</span></button>
-      <button class="hero-ctl" type="button" data-next aria-label="Diapositiva siguiente">{ICON_CHEV_R}</button>
+      <button class="hero-ctl hero-ctl-a11y" type="button" data-toggle-play aria-label="Pausar reproducción automática" aria-pressed="false"><span class="ico-pause">{ICON_PAUSE}</span><span class="ico-play">{ICON_PLAY}</span></button>
     </div>
   </div>
   <p class="sr-only" role="status" aria-live="polite" data-slide-status></p>
@@ -764,7 +766,7 @@ def model_card(key, heading="h2"):
       <div class="model-stats">{stat_items(m['stats'])}</div>
       <div class="model-actions">
         {btn(f"Descubrí el {m['name']}", href=model_url(key), kind="cream", icon=ICON_ARROW, extra="btn-arrow")}
-        {btn("Agendá tu test drive", kind="outline", attrs=f' data-open-contact data-model="{m["name"]}"')}
+        {btn("Agendá tu prueba de manejo", kind="outline", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}
       </div>
     </div>
   </div>
@@ -827,7 +829,7 @@ def model_hero(m, image=None, mobile=None, cta=True, h1=None, kicker=None):
                   img_cls="hero-bg", loading="eager", fetchpriority="high", mobile=mobile, decoding="sync",
                   attrs=f' style="--pos:{m.get("hero_pos", "50% 50%")}"')
     stats = f'<div class="stats-row">{stat_items(m["stats"])}</div>' if m.get("stats") else ""
-    actions = f'''<div class="hero-actions">{btn("Agendá tu test drive", kind="accent", attrs=f' data-open-contact data-model="{m["name"]}"')}{btn("Ficha técnica (PDF)", href="/" + m["pdf"], kind="outline", icon=ICON_DOWNLOAD, attrs=' target="_blank" rel="noopener"') if m.get("pdf") else ""}</div>''' if cta else ""
+    actions = f'''<div class="hero-actions">{btn("Agendá tu prueba de manejo", kind="accent", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}{btn("Ficha técnica (PDF)", href="/" + m["pdf"], kind="outline", icon=ICON_DOWNLOAD, attrs=' target="_blank" rel="noopener"') if m.get("pdf") else ""}</div>''' if cta else ""
     return f'''
 <section class="hero-model">
   {pic}
@@ -1106,7 +1108,7 @@ def page_article(n):
     {eyebrow(m["eyebrow"])}
     <h2>{m["name"]}</h2>
     <p>{m["claim"]}</p>
-    <div class="model-actions">{btn(f"Descubrí el {m['name']}", href=model_url(n["cta_model"]), kind="cream", icon=ICON_ARROW, extra="btn-arrow")}{btn("Agendá tu test drive", kind="outline", attrs=f' data-open-contact data-model="{m["name"]}"')}</div>
+    <div class="model-actions">{btn(f"Descubrí el {m['name']}", href=model_url(n["cta_model"]), kind="cream", icon=ICON_ARROW, extra="btn-arrow")}{btn("Agendá tu prueba de manejo", kind="outline", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}</div>
   </div>
 </aside>'''
     content = f'''

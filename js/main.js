@@ -82,9 +82,25 @@
   /* ----- modal de contacto ----- */
   var modal = $("#contactModal");
   var lastFocus = null;
-  function openContact(model) {
+  var MODES = {
+    "test-drive": { eyebrow: "Prueba de manejo", title: "Agendá tu prueba de manejo", sub: "Elegí el modelo y un asesor coordina con vos día, hora y lugar.", channels: "¿Preferís hablar ahora?", submit: "Agendar prueba de manejo", tipo: "Prueba de manejo", done: "Registramos tu solicitud de prueba de manejo." },
+    "contacto": { eyebrow: "Contacto", title: "Contáctanos", sub: "Elegí cómo preferís hablar con nosotros.", channels: "Llamanos o escribinos", submit: "Enviar consulta", tipo: "Consulta", done: "Registramos tu consulta." }
+  };
+  function setMode(intent) {
+    var m = MODES[intent] || MODES["test-drive"];
+    var panel = $(".modal-panel", modal);
+    panel.setAttribute("data-mode", MODES[intent] ? intent : "test-drive");
+    ["eyebrow", "title", "sub", "channels"].forEach(function (k) { var el = $('[data-m="' + k + '"]', modal); if (el) el.textContent = m[k]; });
+    var orForm = $('[data-m="form"]', modal); if (orForm) orForm.hidden = intent !== "contacto";
+    var btn = $("#waForm [type=submit]", modal); if (btn) { btn.setAttribute("data-label", m.submit); btn.querySelector("span").textContent = m.submit; }
+    var tipo = $('#waForm [name="tipo"]', modal); if (tipo) tipo.value = m.tipo;
+    var done = $("[data-success-what]", modal); if (done) done.textContent = m.done;
+    modal.setAttribute("data-intent", intent);
+  }
+  function openContact(model, intent) {
     if (!modal) return;
     lastFocus = doc.activeElement;
+    setMode(intent || "test-drive");
     var sel = $('select[name="modelo"]', modal);
     if (sel) {
       sel.selectedIndex = 0;
@@ -94,8 +110,8 @@
     modal.hidden = false;
     lockScroll(true);
     setInertOutside(modal, true);
-    var first = $("input", modal);
-    if (first && window.matchMedia("(min-width: 768px)").matches) first.focus(); else $(".modal-panel", modal).focus();
+    var first = intent === "contacto" ? $(".contact-card", modal) : $("input", modal);
+    if (first && window.matchMedia("(min-width: 768px)").matches && intent !== "contacto") first.focus(); else $(".modal-panel", modal).focus();
   }
   function closeContact() {
     if (!modal || modal.hidden) return;
@@ -118,7 +134,7 @@
     if (cs && ckSettings) { ckSettings.hidden = !ckSettings.hidden; cs.setAttribute("aria-expanded", ckSettings.hidden ? "false" : "true"); return; }
     if (t.closest("[data-cookie-save]")) { var an = $("#ckAnalytics"); saveConsent(an ? an.checked : false); return; }
     var opener = t.closest("[data-open-contact]");
-    if (opener) { e.preventDefault(); openContact(opener.getAttribute("data-model")); return; }
+    if (opener) { e.preventDefault(); openContact(opener.getAttribute("data-model"), opener.getAttribute("data-intent") || "test-drive"); return; }
     if (t.closest("[data-close-contact]")) { closeContact(); return; }
     if (t.closest("[data-open-menu]")) { e.preventDefault(); openMenu(); return; }
     if (t.closest("[data-close-menu]")) { if (t.closest("button")) e.preventDefault(); closeMenu(); }
@@ -153,7 +169,9 @@
       var el = form.elements[k]; return el && el.value.trim() ? labels[k] + ": " + el.value.trim() : null;
     }).filter(Boolean);
     lines.push("Origen: zeekrlife.com.py");
-    var text = "Hola ZEEKR Paraguay, quiero coordinar una prueba de manejo y recibir más información.\n" + lines.join("\n");
+    var tipo = form.elements.tipo ? form.elements.tipo.value : "Prueba de manejo";
+    var intro = tipo === "Consulta" ? "Hola ZEEKR Paraguay, quiero hacer una consulta." : "Hola ZEEKR Paraguay, quiero coordinar una prueba de manejo.";
+    var text = intro + "\n" + lines.join("\n");
     return "https://wa.me/" + form.getAttribute("data-wa") + "?text=" + encodeURIComponent(text);
   }
   function showSuccess(form, data, wa) {
@@ -164,8 +182,7 @@
     box.querySelector("[data-success-advisor]").textContent = data && data.asesor ? data.asesor + " te contacta en el día." : "Un asesor te contacta en el día.";
     box.querySelector("[data-success-wa]").href = wa;
     form.hidden = true;
-    var cards = form.parentNode.querySelector(".contact-cards"); if (cards) cards.hidden = true;
-    var sub = form.parentNode.querySelector(".modal-sub"); if (sub) sub.hidden = true;
+    ["modal-channels", "modal-sub", "modal-or-form"].forEach(function (k) { var el = form.parentNode.querySelector("." + k); if (el) el.hidden = true; });
     box.hidden = false;
     box.querySelector("[data-success-wa]").focus();
   }
@@ -173,8 +190,7 @@
     var box = form.parentNode.querySelector(".form-success");
     if (box) box.hidden = true;
     form.hidden = false;
-    var cards = form.parentNode.querySelector(".contact-cards"); if (cards) cards.hidden = false;
-    var sub = form.parentNode.querySelector(".modal-sub"); if (sub) sub.hidden = false;
+    ["modal-channels", "modal-sub"].forEach(function (k) { var el = form.parentNode.querySelector("." + k); if (el) el.hidden = false; });
     form.reset();
     var st = $(".form-status", form); if (st) st.textContent = "";
     var btn = form.querySelector("[type=submit]"); if (btn) { btn.disabled = false; btn.querySelector("span").textContent = btn.getAttribute("data-label"); }
@@ -191,6 +207,7 @@
     var payload = {
       nombre: nombre.value.trim(), telefono: tel.value.trim(),
       modelo: form.elements.modelo.value, mensaje: (form.elements.mensaje.value || "").trim() || null,
+      tipo: form.elements.tipo ? form.elements.tipo.value : "Prueba de manejo",
       pagina: location.href.split("#")[0], website: form.elements.website ? form.elements.website.value : ""
     };
     var u = utms(); UTM_KEYS.forEach(function (k) { if (u[k]) payload[k] = u[k]; });
@@ -230,7 +247,7 @@
     var status = $("[data-slide-status]", hero);
     var playBtn = $("[data-toggle-play]", hero);
     var track = $(".hero-track", hero);
-    var idx = 0, timer = null, DUR = 6000, userPaused = reduceMotion, hovering = false;
+    var idx = 0, timer = null, DUR = 6000, userPaused = false, hovering = false;
 
     function restartBar(bar) {
       bar.classList.remove("is-active");
@@ -274,8 +291,7 @@
     if (next) next.addEventListener("click", function () { go(idx + 1, true); });
     if (playBtn) playBtn.addEventListener("click", function () { userPaused = !userPaused; syncPaused(); play(); });
 
-    hero.addEventListener("mouseenter", function () { hovering = true; syncPaused(); stop(); });
-    hero.addEventListener("mouseleave", function () { hovering = false; syncPaused(); play(); });
+    /* corre solo: no se pausa con el mouse; sí al navegar con teclado dentro del hero */
     hero.addEventListener("focusin", function () { hovering = true; syncPaused(); stop(); });
     hero.addEventListener("focusout", function (e) { if (!hero.contains(e.relatedTarget)) { hovering = false; syncPaused(); play(); } });
     hero.addEventListener("keydown", function (e) {

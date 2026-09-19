@@ -86,6 +86,7 @@ export function validate(body) {
   const lead = {
     nombre: str(b.nombre, 120), telefono: str(b.telefono, 40), email: str(b.email, 120) || null,
     modelo: str(b.modelo, 60) || "Aún no lo sé", mensaje: str(b.mensaje, 1500) || null, pagina: str(b.pagina, 300) || null,
+    tipo: ["Consulta", "Prueba de manejo"].includes(str(b.tipo, 40)) ? str(b.tipo, 40) : "Prueba de manejo",
     website: str(b.website, 200),
   };
   for (const k of UTM_KEYS) { const v = str(b[k], 160); if (v) lead[k] = v; }
@@ -115,16 +116,16 @@ export async function createLead(body, env) {
   const advisor = await nextAdvisor(env);
   const parts = lead.nombre.split(/\s+/);
   const [first, last] = parts.length > 1 ? [parts[0], parts.slice(1).join(" ")] : [lead.nombre, ""];
-  const notes = [`Modelo de interés: ${lead.modelo}`];
+  const notes = [`Solicitud: ${lead.tipo}`, `Modelo de interés: ${lead.modelo}`];
   if (lead.mensaje) notes.push(`Mensaje: ${lead.mensaje}`);
   if (lead.pagina) notes.push(`Página: ${lead.pagina}`);
   const utms = UTM_KEYS.filter((k) => lead[k]);
   if (utms.length) notes.push("UTM: " + utms.map((k) => `${k.slice(4)}=${lead[k]}`).join(", "));
   notes.push(`Origen: ${SITE} · ${new Date().toLocaleString("es-PY", { timeZone: "America/Asuncion" })}`);
   const fields = {
-    TITLE: `${lead.nombre} - ${lead.modelo} - ZEEKR Web Santa Rosa`,
+    TITLE: `${lead.nombre} - ${lead.modelo} - ${lead.tipo} - ZEEKR Web Santa Rosa`,
     NAME: first, LAST_NAME: last,
-    STATUS_ID: "NEW", SOURCE_ID: c.sourceId, SOURCE_DESCRIPTION: SITE,
+    STATUS_ID: "NEW", SOURCE_ID: c.sourceId, SOURCE_DESCRIPTION: `${SITE} · ${lead.tipo}`,
     ASSIGNED_BY_ID: advisor.id, OPENED: "Y",
     PHONE: [{ VALUE: normalizePhone(lead.telefono), VALUE_TYPE: "MOBILE" }],
     COMMENTS: notes.join("\n"),
