@@ -60,7 +60,7 @@ Reglas de negocio: `status` en draft/published/archived; la vista previa incluye
 ## 5. Usuarios, roles y acceso
 
 - **Administrator** (Directus): croman@santarosa.com.py. Crea usuarios, sitios, configura todo.
-- **Editor**: campo `site` en el usuario; permisos de lectura/escritura solo sobre ítems con `site = $CURRENT_USER.site` (filtros de permisos por fila); lectura de `builds` propios; sin acceso a `sites`, usuarios ni settings de Directus.
+- **Editor**: campo `site` en el usuario; permisos de lectura/escritura solo sobre ítems con `site = $CURRENT_USER.site` (filtros de permisos por fila); lectura de `builds` de su sitio y de su fila en `sites` (solo lectura); sin acceso a otros sitios, usuarios ni settings de Directus.
 - Sin registro público. Alta solo por admin (invitación por email → link para definir contraseña). **Flow bloqueante en `users.create/update`** rechaza emails que no terminen en `@santarosa.com.py`.
 - Reset de contraseña: nativo de Directus por SMTP (Google Workspace, contraseña de aplicación). Enlaces solo a `admin.santarosa.lat` (allow-lists).
 - 2FA (TOTP) obligatorio para administradores, opcional para editores.
@@ -69,7 +69,7 @@ Reglas de negocio: `status` en draft/published/archived; la vista previa incluye
 
 ## 6. Publicación, vista previa y versiones
 
-- Botones en el panel (Flows manuales sobre `sites`): **Vista previa**, **Publicar**, **Volver a la versión anterior**. Cada uno crea un registro en `builds` y llama al builder con token compartido.
+- Botones en el panel (Flows manuales sobre `site_settings`, visible para el editor de ese sitio): **Vista previa**, **Publicar**, **Volver a la versión anterior**. Cada uno crea un registro en `builds` y llama al builder con token compartido.
 - Preview: build con drafts a `/srv/sites/<sitio>/preview` → `https://preview-zeekr.santarosa.lat` (noindex, Cloudflare Access).
 - Publicar: build solo con published → `releases/<timestamp>` y cambio atómico del symlink `current`; se conservan las últimas 10 releases; rollback = repuntar symlink.
 - Historial de ítems: Revisions nativas de Directus (restaurar versión de un texto/foto).
