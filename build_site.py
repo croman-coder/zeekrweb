@@ -323,6 +323,27 @@ NEWS = [
         ],
         "cta_model": "7x",
     },
+    {
+        "slug": "lanzamiento-zeekr-7x-ciudad-del-este",
+        "draft": True,  # ← quitar cuando estén fotos en images/noticias/cde-2026/ y fecha confirmada
+        "date": "2026-09-01",
+        "kicker": "Evento · Ciudad del Este",
+        "title": "El ZEEKR 7X llegó a Ciudad del Este",
+        "lead": "Santa Rosa Paraguay presentó el ZEEKR 7X en Ciudad del Este: una noche con invitados, prensa y el SUV eléctrico de próxima generación develado en vivo.",
+        "place": "Ciudad del Este",
+        "place_locality": "Ciudad del Este",
+        "quote": ("El futuro no se parece a nada de lo que conocés.", None, "Pantalla del lanzamiento"),
+        "quote_pos": 0,
+        "img": "images/noticias/cde-2026/01-portada.jpg",
+        "body": [
+            "Con esa frase en pantalla y el vehículo aún cubierto, arrancó la presentación del ZEEKR 7X ante los invitados del Este del país. Agustín Varela, Director País, presentó la marca y el modelo antes del develado.",
+            "El ZEEKR 7X se mostró en sus dos versiones —Smart y Performance— con sus tecnologías clave: sistema de alto voltaje de 800 V, cabina con procesador Qualcomm Snapdragon 8295, pantalla central Mini-LED de 16″ y hasta 543 km de autonomía (WLTP).",
+            "Los asistentes recorrieron el interior, probaron la cabina digital y se fotografiaron en el photo wall ZEEKR 7X. Ciudad del Este suma así su primera experiencia ZEEKR en vivo.",
+            "El ZEEKR 7X ya se puede conocer en Paraguay. Agendá tu prueba de manejo y descubrí por qué es el SUV eléctrico de próxima generación.",
+        ],
+        "gallery": [],
+        "cta_model": "7x",
+    },
     {"date": "2025-01-08", "title": "ZEEKR en CES 2025: tecnología líder en la industria, estrategia de co-creación y una solución energética global", "img": "images/noticias/ces-2025.png", "kicker": "ZEEKR Global"},
     {"date": "2025-01-06", "title": "ZEEKR amplía su asociación con Qualcomm para ofrecer una experiencia de entretenimiento inmersiva en los vehículos del futuro", "img": "images/noticias/asociacion-qualcomm.png", "kicker": "ZEEKR Global"},
     {"date": "2024-12-13", "title": "ZEEKR 001: luces inteligentes para iluminar tu camino", "img": "images/noticias/luces-inteligentes.png", "kicker": "Tecnología"},
@@ -333,6 +354,7 @@ NEWS = [
     {"date": "2024-05-10", "title": "Un hito en el viaje global de ZEEKR: la compañía completa su oferta pública inicial en la Bolsa de Nueva York", "img": "images/noticias/noticia1.jpg", "kicker": "ZEEKR Global"},
     {"date": "2024-04-09", "title": "ZEEKR M-Vision, un concepto completamente reimaginado para el futuro de la movilidad", "img": "images/noticias/noticia2.png", "kicker": "Concepto"},
 ]
+NEWS = [n for n in NEWS if not n.get("draft")]  # borradores (sin fotos/fecha confirmadas) no se publican
 NEWS.sort(key=lambda n: n["date"], reverse=True)
 
 
@@ -1093,7 +1115,8 @@ def page_article(n):
     paras = [f"<p>{p}</p>" for p in n["body"]]
     if n.get("quote"):
         q, who, org = n["quote"]
-        paras.insert(2, f'<blockquote class="article-quote"><p>“{q}”</p><footer><cite>{who}</cite> · {org}</footer></blockquote>')
+        foot = f"<footer><cite>{who}</cite>{' · ' + org if org else ''}</footer>" if who else (f"<footer>{org}</footer>" if org else "")
+        paras.insert(n.get("quote_pos", 2), f'<blockquote class="article-quote"><p>“{q}”</p>{foot}</blockquote>')
     body = "".join(paras)
     gallery = ""
     if n.get("gallery"):
@@ -1132,7 +1155,7 @@ def page_article(n):
     article = {"@type": "NewsArticle", "headline": n["title"], "description": n["lead"], "datePublished": n["date"], "dateModified": n["date"],
                "inLanguage": "es-PY", "url": DOMAIN + url, "mainEntityOfPage": DOMAIN + url, "image": images,
                "articleSection": "Eventos", "author": {"@id": DOMAIN + "/#org"}, "publisher": {"@id": DOMAIN + "/#org"},
-               **({"contentLocation": {"@type": "Place", "name": n["place"], "address": {"@type": "PostalAddress", "addressLocality": "Asunción", "addressCountry": "PY"}}} if n.get("place") else {}),
+               **({"contentLocation": {"@type": "Place", "name": n["place"], "address": {"@type": "PostalAddress", "addressLocality": n.get("place_locality", "Asunción"), "addressCountry": "PY"}}} if n.get("place") else {}),
                "about": [{"@type": "Car", "name": m["name"], "brand": {"@type": "Brand", "name": "ZEEKR"}}] if m else []}
     jsonld = graph(article, breadcrumb([("Inicio", "/"), ("Noticias", "/noticias/"), (n["title"], url)]))
     render_page(url, f"{n['title']} — ZEEKR Paraguay", n["lead"], content, "noticias", jsonld,
