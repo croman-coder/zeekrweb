@@ -325,21 +325,19 @@ NEWS = [
     },
     {
         "slug": "lanzamiento-zeekr-7x-ciudad-del-este",
-        "draft": True,  # ← quitar cuando estén fotos en images/noticias/cde-2026/ y fecha confirmada
-        "date": "2026-09-01",
+        "date": "2026-09-19",
         "kicker": "Evento · Ciudad del Este",
         "title": "El ZEEKR 7X llegó a Ciudad del Este",
-        "lead": "Santa Rosa Paraguay presentó el ZEEKR 7X en Ciudad del Este: una noche con invitados, prensa y el SUV eléctrico de próxima generación develado en vivo.",
+        "lead": "Santa Rosa Paraguay presentó el ZEEKR 7X en Ciudad del Este: una noche con invitados y prensa, y el SUV eléctrico de próxima generación develado en vivo.",
         "place": "Ciudad del Este",
         "place_locality": "Ciudad del Este",
         "quote": ("El futuro no se parece a nada de lo que conocés.", None, "Pantalla del lanzamiento"),
         "quote_pos": 0,
-        "img": "images/noticias/cde-2026/01-portada.jpg",
+        "img": "images/hero/7x-desktop.jpg",
+        "img_pos": "60% 50%",
         "body": [
-            "Con esa frase en pantalla y el vehículo aún cubierto, arrancó la presentación del ZEEKR 7X ante los invitados del Este del país. Agustín Varela, Director País, presentó la marca y el modelo antes del develado.",
-            "El ZEEKR 7X se mostró en sus dos versiones —Smart y Performance— con sus tecnologías clave: sistema de alto voltaje de 800 V, cabina con procesador Qualcomm Snapdragon 8295, pantalla central Mini-LED de 16″ y hasta 543 km de autonomía (WLTP).",
-            "Los asistentes recorrieron el interior, probaron la cabina digital y se fotografiaron en el photo wall ZEEKR 7X. Ciudad del Este suma así su primera experiencia ZEEKR en vivo.",
-            "El ZEEKR 7X ya se puede conocer en Paraguay. Agendá tu prueba de manejo y descubrí por qué es el SUV eléctrico de próxima generación.",
+            "Con esa frase en pantalla y el vehículo aún cubierto arrancó la presentación ante los invitados del Este del país. Agustín Varela, Director País, presentó la marca y el modelo antes del develado del ZEEKR 7X.",
+            "Los asistentes recorrieron el interior, probaron la cabina digital y conocieron de cerca las dos versiones —Smart y Performance—, con su sistema de 800 V y hasta 543 km de autonomía (WLTP). Ciudad del Este suma así su primera experiencia ZEEKR en vivo. Agendá tu prueba de manejo y descubrí el SUV eléctrico de próxima generación.",
         ],
         "gallery": [],
         "cta_model": "7x",
@@ -1111,7 +1109,7 @@ def page_noticias():
 def page_article(n):
     url = news_url(n)
     m = MODELS.get(n.get("cta_model"))
-    cover = picture(n["img"], n["title"], (960, 1600, 2400), sizes="100vw", cls="article-cover", loading="eager", fetchpriority="high")
+    cover = picture(n["img"], n["title"], (960, 1600, 2400), sizes="100vw", cls="article-cover", loading="eager", fetchpriority="high", attrs=f' style="object-position:{n["img_pos"]}"' if n.get("img_pos") else "")
     paras = [f"<p>{p}</p>" for p in n["body"]]
     if n.get("quote"):
         q, who, org = n["quote"]
