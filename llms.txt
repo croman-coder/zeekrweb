@@ -1,0 +1,29 @@
+# ZEEKR Paraguay
+
+> Sitio oficial de ZEEKR en Paraguay (distribuidor: Santa Rosa Paraguay). Vehículos eléctricos premium ZEEKR 7X, ZEEKR X y ZEEKR 001. Contenido en español (raíz), inglés (/en/), portugués (/pt/) y chino simplificado (/zh/).
+
+## Modelos
+- [ZEEKR 7X](https://zeekrlife.com.py/modelos/zeekr-7x/): El SUV de próxima generación. SUV eléctrico premium de próxima generación. Sistema de alto voltaje de 800 V, 0–100 km/h en 3,8 s (Performance), hasta 543 km de autonomía WLTP y batería de hasta 100 kWh.
+- [ZEEKR X](https://zeekrlife.com.py/modelos/zeekr-x/): El SUV urbano premium. SUV compacto eléctrico premium. Hasta 440 km de autonomía WLTP (RWD), 0–100 km/h en 3,8 s (AWD) y batería de 69 kWh.
+- [ZEEKR 001](https://zeekrlife.com.py/modelos/zeekr-001/): El crossover de lujo. Deportivo familiar eléctrico premium. Hasta 620 km de autonomía WLTP, aceleración 0–100 km/h en 3,8 s (AWD) y batería de 100 kWh.
+
+## Datos clave
+- ZEEKR 7X: 800 V, 0–100 km/h en 3,8 s (Performance), hasta 543 km WLTP; garantía 5 años/100.000 km (vehículo) y 8 años/160.000 km (batería).
+- ZEEKR X: hasta 440 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 69 kWh.
+- ZEEKR 001: hasta 620 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 100 kWh, carga 10–80 % en <30 min (200 kW DC).
+- Contacto ventas: +595 971 370 006 · Postventa: +595 974 772 247 · WhatsApp: https://wa.me/595971370006
+
+## Páginas
+- [Inicio](https://zeekrlife.com.py/)
+- [Modelos](https://zeekrlife.com.py/modelos/)
+- [Noticias](https://zeekrlife.com.py/noticias/)
+- [Nosotros](https://zeekrlife.com.py/nosotros/)
+- [El ZEEKR 7X llegó a Ciudad del Este](https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/)
+- [ZEEKR 7X: así fue su lanzamiento en Paraguay](https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/)
+
+## Idiomas
+- English: https://zeekrlife.com.py/en/
+- Português: https://zeekrlife.com.py/pt/
+- 中文: https://zeekrlife.com.py/zh/
+
+Sitemap: https://zeekrlife.com.py/sitemap.xml

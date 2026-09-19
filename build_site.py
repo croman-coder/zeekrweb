@@ -295,7 +295,7 @@ MODELS = {
         "stats": [("800 V", "Sistema de alto voltaje"), ("3,8 s", "0–100 km/h"), ("543 km", "Autonomía WLTP")],
         "pdf": "images/zeekr7x/ficha-tecnica-zeekr-7x.pdf",
         "meta_title": "ZEEKR 7X | SUV eléctrico premium 800 V — ZEEKR Paraguay",
-        "meta_desc": "ZEEKR 7X en Paraguay: SUV eléctrico de próxima generación con sistema de 800 V, cabina Snapdragon 8295, 0–100 km/h en 3,8 s y hasta 543 km de autonomía WLTP. Versiones, dimensiones y garantía.",
+        "meta_desc": "ZEEKR 7X en Paraguay: SUV eléctrico de próxima generación, sistema de 800 V, Snapdragon 8295, 0–100 km/h en 3,8 s y hasta 543 km WLTP. Versiones y garantía.",
         "schema_desc": "SUV eléctrico premium de próxima generación. Sistema de alto voltaje de 800 V, 0–100 km/h en 3,8 s (Performance), hasta 543 km de autonomía WLTP y batería de hasta 100 kWh.",
         "faq": [
             ("¿Qué autonomía tiene el ZEEKR 7X?", "Hasta 480 km (WLTP) en la versión Smart con batería de 75 kWh y hasta 543 km (WLTP) en la versión Performance con batería de 100 kWh. La autonomía real varía según clima, camino, carga y estilo de manejo."),
@@ -314,7 +314,7 @@ MODELS = {
         "stats": [("440 km", "Autonomía WLTP"), ("3,8 s", "0–100 km/h (AWD)"), ("428 HP", "Potencia máxima")],
         "pdf": "images/zeekrx/ficha-tecnica-zeekr-x.pdf",
         "meta_title": "ZEEKR X | SUV eléctrico urbano premium — ZEEKR Paraguay",
-        "meta_desc": "ZEEKR X en Paraguay: SUV eléctrico urbano premium con hasta 440 km de autonomía WLTP, 0–100 km/h en 3,8 s (AWD), techo panorámico doble y control XTCS. Conocé sus versiones y agendá tu test drive.",
+        "meta_desc": "ZEEKR X en Paraguay: SUV eléctrico urbano premium, hasta 440 km WLTP, 0–100 km/h en 3,8 s (AWD), techo panorámico doble y XTCS. Versiones y test drive.",
         "schema_desc": "SUV compacto eléctrico premium. Hasta 440 km de autonomía WLTP (RWD), 0–100 km/h en 3,8 s (AWD) y batería de 69 kWh.",
         "faq": [
             ("¿Qué autonomía tiene el ZEEKR X?", "Hasta 440 km (WLTP) en la versión Premium RWD y hasta 420 km (WLTP) en la versión Flagship AWD, con batería de 69 kWh."),
@@ -332,7 +332,7 @@ MODELS = {
         "stats": [("620 km", "Autonomía WLTP"), ("3,8 s", "0–100 km/h (AWD)"), ("536 HP", "Potencia máxima")],
         "pdf": "images/zeekr001/ficha-tecnica-zeekr-001.pdf",
         "meta_title": "ZEEKR 001 | Crossover eléctrico de lujo — ZEEKR Paraguay",
-        "meta_desc": "ZEEKR 001 en Paraguay: crossover eléctrico premium con hasta 620 km de autonomía WLTP, 0–100 km/h en 3,8 s (AWD) y batería de 100 kWh. Ficha técnica, versiones y test drive.",
+        "meta_desc": "ZEEKR 001 en Paraguay: crossover eléctrico premium, hasta 620 km WLTP, 0–100 km/h en 3,8 s (AWD) y batería de 100 kWh. Ficha técnica y test drive.",
         "schema_desc": "Deportivo familiar eléctrico premium. Hasta 620 km de autonomía WLTP, aceleración 0–100 km/h en 3,8 s (AWD) y batería de 100 kWh.",
         "faq": [
             ("¿Qué autonomía tiene el ZEEKR 001?", "Hasta 620 km (WLTP) en la versión Sport RWD y hasta 580 km (WLTP) en la Flagship AWD, con batería de 100 kWh."),
@@ -379,6 +379,7 @@ NEWS = [
         "kicker": "Evento · Asunción",
         "title": "ZEEKR 7X: así fue su lanzamiento en Paraguay",
         "lead": "Santa Rosa Paraguay presentó oficialmente el ZEEKR 7X en una noche exclusiva en Alma, Asunción, con invitados, prensa y el nuevo SUV eléctrico de próxima generación como protagonista.",
+        "meta_desc": "Santa Rosa Paraguay presentó el ZEEKR 7X en Alma, Asunción: invitados, prensa y el nuevo SUV eléctrico de próxima generación como protagonista.",
         "place": "Alma, Asunción",
         "place_locality": "Asunción",
         "quote": ("Paraguay tiene un enorme potencial; su dinamismo económico lo convierte en un escenario ideal para adoptar nuevas tecnologías en movilidad.", "Manuel Antelo", "Grupo Antelo"),
@@ -672,6 +673,7 @@ def head_block(title, desc, path, jsonld, og_img, preload="", preload_mobile=Non
         hreflang += f'\n  <link rel="alternate" hreflang="x-default" href="{DOMAIN}{alts["es"]}">'
     og_alt = "".join(f'\n  <meta property="og:locale:alternate" content="{LANGS[k]["og"]}">' for k in alts if k != L)
     i18n = json.dumps(js_i18n(), ensure_ascii=False).replace("</", "<\\/")
+    head_v = file_hash("js/head.js")
     return f'''  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{esc(title)}</title>
@@ -701,7 +703,8 @@ def head_block(title, desc, path, jsonld, og_img, preload="", preload_mobile=Non
   <link rel="preload" href="/fonts/ZeekrHeadline-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/ZeekrText-Regular.woff2" as="font" type="font/woff2" crossorigin>{pre}
   <link rel="stylesheet" href="/css/zeekr-site.css?v={css_v}">
-  <script>document.documentElement.classList.add('js');window.ZK_I18N={i18n};window.__zkGA=function(){{if(window.__zkGAOn)return;window.__zkGAOn=1;window.dataLayer=window.dataLayer||[];window.gtag=function(){{dataLayer.push(arguments)}};gtag('js',new Date());gtag('config','{GA_ID}',{{anonymize_ip:true}});var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id={GA_ID}';document.head.appendChild(s)}};try{{var c=JSON.parse(localStorage.getItem('zeekr-consent')||'null');if(c&&c.analytics)window.__zkGA()}}catch(e){{}}</script>
+  <script src="/js/head.js?v={head_v}"></script>
+  <script type="application/json" id="zk-i18n">{i18n}</script>
   <script type="application/ld+json">{ld}</script>'''
 
 
@@ -946,7 +949,7 @@ def build_index():
         faq_schema(HOME_FAQ),
     )
     render_page(url_home(), _("ZEEKR Paraguay | Vehículos eléctricos premium: 7X, X y 001"),
-                _("Descubrí los vehículos eléctricos premium ZEEKR en Paraguay: ZEEKR 7X, ZEEKR X y ZEEKR 001. Diseño escandinavo, tecnología líder y autonomía real. Agendá tu prueba de manejo."),
+                _("Vehículos eléctricos premium ZEEKR en Paraguay: ZEEKR 7X, X y 001. Diseño escandinavo, tecnología líder y autonomía real. Agendá tu prueba de manejo."),
                 content, "", jsonld, og, preload=_derivative(MODELS["7x"]["hero_desktop"], 1800, "webp", False)[0], body_cls="page-home has-hero",
                 preload_mobile=[_derivative(MODELS["7x"]["hero_mobile"], w, "webp", False) for w in (480, 780)], alts=alts)
 
@@ -1180,7 +1183,7 @@ def page_modelos():
              {"@type": "ListItem", "position": i + 1, "name": MODELS[k]["name"], "url": DOMAIN + url_model(k)} for i, k in enumerate(MODEL_ORDER)]}},
         breadcrumb([(_("Inicio"), url_home()), (_("Modelos"), url)]))
     render_page(url, _("Modelos ZEEKR en Paraguay | 7X, X y 001 — ZEEKR Paraguay"),
-                _("Conocé la gama ZEEKR en Paraguay: ZEEKR 7X (SUV de próxima generación), ZEEKR X (SUV urbano premium) y ZEEKR 001 (crossover eléctrico de lujo). Fichas técnicas y test drive."),
+                _("Gama ZEEKR en Paraguay: ZEEKR 7X (SUV de próxima generación), ZEEKR X (SUV urbano premium) y ZEEKR 001 (crossover de lujo). Fichas técnicas y test drive."),
                 content, "modelos", jsonld, og_image("images/hero/7x-desktop.jpg", "modelos"), body_cls="page-list",
                 alts=alternates(lambda lang: url_section("modelos", lang)))
 
@@ -1220,7 +1223,7 @@ def page_noticias():
          "mainEntity": {"@type": "ItemList", "itemListElement": [
              {"@type": "ListItem", "position": i + 1, "name": _(n["title"]), **({"url": DOMAIN + url_news(n)} if url_news(n) else {})} for i, n in enumerate(NEWS)]}},
         breadcrumb([(_("Inicio"), url_home()), (_("Noticias"), url)]))
-    render_page(url, _("Noticias ZEEKR Paraguay | Lanzamientos, eventos y tecnología EV"),
+    render_page(url, _("Noticias ZEEKR Paraguay | Lanzamientos, eventos y tecnología"),
                 _("Todas las noticias de ZEEKR en Paraguay: lanzamientos, eventos, tecnología eléctrica, alianzas y novedades de los modelos 7X, X y 001."),
                 content, "noticias", jsonld, og_image(featured["img"] if featured else "images/hero/7x-desktop.jpg", "noticias"), body_cls="page-list",
                 alts=alternates(lambda lang: url_section("noticias", lang)))
@@ -1277,7 +1280,8 @@ def page_article(n):
                **({"contentLocation": {"@type": "Place", "name": n["place"], "address": {"@type": "PostalAddress", "addressLocality": n.get("place_locality", "Asunción"), "addressCountry": "PY"}}} if n.get("place") else {}),
                "about": [{"@type": "Car", "name": m["name"], "brand": {"@type": "Brand", "name": "ZEEKR"}}] if m else []}
     jsonld = graph(article, breadcrumb([(_("Inicio"), url_home()), (_("Noticias"), url_section("noticias")), (_(n["title"]), url)]))
-    render_page(url, f"{_(n['title'])} — ZEEKR Paraguay", _(n["lead"]), content, "noticias", jsonld,
+    page_title = _(n["title"]) + (" — ZEEKR Paraguay" if len(_(n["title"])) <= 42 else "")
+    render_page(url, page_title, _(n.get("meta_desc") or n["lead"]), content, "noticias", jsonld,
                 og_image(n["img"], n["slug"]), body_cls="page-article", lastmod=n["date"],
                 alts=alternates(lambda lang: url_news(n, lang)))
 
@@ -1308,8 +1312,8 @@ def page_nosotros():
         contact_strip()
     jsonld = graph({"@type": "AboutPage", "name": _("Nosotros — ZEEKR Paraguay"), "url": DOMAIN + url, "inLanguage": LANGS[L]["html"], "about": {"@id": DOMAIN + "/#org"}},
                    breadcrumb([(_("Inicio"), url_home()), (_("Nosotros"), url)]))
-    render_page(url, _("Nosotros | ZEEKR Paraguay — la marca eléctrica premium de Geely"),
-                _("Conocé la historia de ZEEKR: diseño en Gotemburgo, manufactura inteligente en Hangzhou, el Grupo Geely y Santa Rosa Paraguay como distribuidor oficial de la movilidad eléctrica premium."),
+    render_page(url, _("Nosotros | ZEEKR Paraguay, marca eléctrica premium de Geely"),
+                _("La historia de ZEEKR: diseño en Gotemburgo, manufactura inteligente en Hangzhou y el respaldo del Grupo Geely. Santa Rosa Paraguay, distribuidor oficial."),
                 content, "nosotros", jsonld, og_image("images/nosotros/manufactura2.jpg", "nosotros"),
                 preload=_derivative("images/nosotros/manufactura2.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero",
                 alts=alternates(lambda lang: url_section("nosotros", lang)))
@@ -1349,12 +1353,25 @@ def build_meta():
     open("_redirects", "w").write("\n".join(lines) + "\n")
     sec = ["  X-Content-Type-Options: nosniff", "  X-Frame-Options: SAMEORIGIN",
            "  Referrer-Policy: strict-origin-when-cross-origin", "  Permissions-Policy: camera=(), microphone=(), geolocation=()"]
-    hdr = ["/*", *sec, "/images/*", "  Cache-Control: public, max-age=2592000, immutable", "/fonts/*",
+    sec += ["  Strict-Transport-Security: max-age=31536000; includeSubDomains",
+            "  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://stats.g.doubleclick.net; img-src 'self' data: https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://stats.g.doubleclick.net; style-src 'self' 'unsafe-inline'; font-src 'self'; media-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://wa.me https://api.whatsapp.com; upgrade-insecure-requests"]
+    hdr = ["# Cloudflare Pages: para que la vista previa *.pages.dev no se indexe, agregar al crear el proyecto:", "# https://<proyecto>.pages.dev/*", "#   X-Robots-Tag: noindex, nofollow", "/*", *sec, "/images/*", "  Cache-Control: public, max-age=2592000, immutable", "/fonts/*",
            "  Cache-Control: public, max-age=31536000, immutable", "/css/*", "  Cache-Control: public, max-age=2592000, immutable",
            "/js/*", "  Cache-Control: public, max-age=2592000, immutable", "/icons/*", "  Cache-Control: public, max-age=2592000, immutable",
            "/api/*", "  Cache-Control: no-store"]
     open("_headers", "w").write("\n".join(hdr) + "\n")
-    print("OK sitemap.xml robots.txt _redirects _headers")
+    llms = [f"# ZEEKR Paraguay", "",
+            "> Sitio oficial de ZEEKR en Paraguay (distribuidor: Santa Rosa Paraguay). Vehículos eléctricos premium ZEEKR 7X, ZEEKR X y ZEEKR 001. Contenido en español (raíz), inglés (/en/), portugués (/pt/) y chino simplificado (/zh/).", "",
+            "## Modelos", *[f"- [{MODELS[k]['name']}]({DOMAIN}/modelos/{MODELS[k]['slug']}/): {MODELS[k]['tagline']}. {MODELS[k]['schema_desc']}" for k in MODEL_ORDER], "",
+            "## Datos clave", "- ZEEKR 7X: 800 V, 0–100 km/h en 3,8 s (Performance), hasta 543 km WLTP; garantía 5 años/100.000 km (vehículo) y 8 años/160.000 km (batería).",
+            "- ZEEKR X: hasta 440 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 69 kWh.", "- ZEEKR 001: hasta 620 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 100 kWh, carga 10–80 % en <30 min (200 kW DC).",
+            "- Contacto ventas: +595 971 370 006 · Postventa: +595 974 772 247 · WhatsApp: https://wa.me/595971370006", "",
+            "## Páginas", f"- [Inicio]({DOMAIN}/)", f"- [Modelos]({DOMAIN}/modelos/)", f"- [Noticias]({DOMAIN}/noticias/)", f"- [Nosotros]({DOMAIN}/nosotros/)",
+            *[f"- [{n['title']}]({DOMAIN}/noticias/{n['slug']}/)" for n in NEWS if n.get("body")], "",
+            "## Idiomas", f"- English: {DOMAIN}/en/", f"- Português: {DOMAIN}/pt/", f"- 中文: {DOMAIN}/zh/", "",
+            f"Sitemap: {DOMAIN}/sitemap.xml"]
+    open("llms.txt", "w").write("\n".join(llms) + "\n")
+    print("OK sitemap.xml robots.txt _redirects _headers llms.txt")
 
 
 def cleanup():

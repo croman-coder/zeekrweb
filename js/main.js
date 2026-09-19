@@ -3,7 +3,8 @@
   "use strict";
 
   var doc = document;
-  var I18N = window.ZK_I18N || {};
+  var I18N = {};
+  try { var i18nEl = doc.getElementById("zk-i18n"); if (i18nEl) I18N = JSON.parse(i18nEl.textContent || "{}"); } catch (e) { I18N = {}; }
   function tr(key, fallback) { return I18N[key] != null ? I18N[key] : fallback; }
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
