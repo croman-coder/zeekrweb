@@ -87,6 +87,7 @@ export function validate(body) {
     nombre: str(b.nombre, 120), telefono: str(b.telefono, 40), email: str(b.email, 120) || null,
     modelo: str(b.modelo, 60) || "Aún no lo sé", mensaje: str(b.mensaje, 1500) || null, pagina: str(b.pagina, 300) || null,
     tipo: ["Consulta", "Prueba de manejo"].includes(str(b.tipo, 40)) ? str(b.tipo, 40) : "Prueba de manejo",
+    idioma: str(b.idioma, 10).toLowerCase().slice(0, 2) || "es",
     website: str(b.website, 200),
   };
   for (const k of UTM_KEYS) { const v = str(b[k], 160); if (v) lead[k] = v; }
@@ -119,6 +120,8 @@ export async function createLead(body, env) {
   const notes = [`Solicitud: ${lead.tipo}`, `Modelo de interés: ${lead.modelo}`];
   if (lead.mensaje) notes.push(`Mensaje: ${lead.mensaje}`);
   if (lead.pagina) notes.push(`Página: ${lead.pagina}`);
+  const LANG_NAMES = { es: "Español", en: "English", pt: "Português", zh: "中文" };
+  if (lead.idioma && lead.idioma !== "es") notes.push(`Idioma del cliente: ${LANG_NAMES[lead.idioma] || lead.idioma}`);
   const utms = UTM_KEYS.filter((k) => lead[k]);
   if (utms.length) notes.push("UTM: " + utms.map((k) => `${k.slice(4)}=${lead[k]}`).join(", "));
   notes.push(`Origen: ${SITE} · ${new Date().toLocaleString("es-PY", { timeZone: "America/Asuncion" })}`);

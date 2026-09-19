@@ -1,12 +1,327 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://zeekrlife.com.py/</loc><lastmod>2026-09-19</lastmod></url>
-  <url><loc>https://zeekrlife.com.py/modelos/</loc><lastmod>2026-09-19</lastmod></url>
-  <url><loc>https://zeekrlife.com.py/modelos/zeekr-7x/</loc><lastmod>2026-09-19</lastmod></url>
-  <url><loc>https://zeekrlife.com.py/modelos/zeekr-x/</loc><lastmod>2026-09-19</lastmod></url>
-  <url><loc>https://zeekrlife.com.py/modelos/zeekr-001/</loc><lastmod>2026-09-19</lastmod></url>
-  <url><loc>https://zeekrlife.com.py/noticias/</loc><lastmod>2026-09-19</lastmod></url>
-  <url><loc>https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/</loc><lastmod>2026-09-19</lastmod></url>
-  <url><loc>https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/</loc><lastmod>2026-07-28</lastmod></url>
-  <url><loc>https://zeekrlife.com.py/nosotros/</loc><lastmod>2026-09-19</lastmod></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://zeekrlife.com.py/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/modelos/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/modelos/zeekr-7x/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-7x/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/modelos/zeekr-x/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-x/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/modelos/zeekr-001/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-001/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/noticias/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/</loc>
+    <lastmod>2026-07-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/nosotros/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/nosotros/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/about/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/sobre/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/nosotros/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/en/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/en/models/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/en/models/zeekr-7x/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-7x/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/en/models/zeekr-x/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-x/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/en/models/zeekr-001/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-001/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/en/news/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-ciudad-del-este/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-alma/</loc>
+    <lastmod>2026-07-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/en/about/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/nosotros/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/about/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/sobre/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/nosotros/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/pt/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/pt/modelos/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/pt/modelos/zeekr-7x/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-7x/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/pt/modelos/zeekr-x/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-x/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/pt/modelos/zeekr-001/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-001/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/pt/noticias/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-ciudad-del-este/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-alma/</loc>
+    <lastmod>2026-07-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/pt/sobre/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/nosotros/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/about/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/sobre/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/nosotros/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/zh/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/zh/models/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/zh/models/zeekr-7x/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-7x/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-7x/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/zh/models/zeekr-x/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-x/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-x/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/zh/models/zeekr-001/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/modelos/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/models/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/modelos/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/models/zeekr-001/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/modelos/zeekr-001/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/zh/news/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-ciudad-del-este/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-ciudad-del-este/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-alma/</loc>
+    <lastmod>2026-07-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/news/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/noticias/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/news/lanzamiento-zeekr-7x-alma/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/noticias/lanzamiento-zeekr-7x-alma/"/>
+  </url>
+  <url>
+    <loc>https://zeekrlife.com.py/zh/about/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <xhtml:link rel="alternate" hreflang="es-PY" href="https://zeekrlife.com.py/nosotros/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://zeekrlife.com.py/en/about/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://zeekrlife.com.py/pt/sobre/"/>
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://zeekrlife.com.py/zh/about/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://zeekrlife.com.py/nosotros/"/>
+  </url>
 </urlset>

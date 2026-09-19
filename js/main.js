@@ -3,6 +3,8 @@
   "use strict";
 
   var doc = document;
+  var I18N = window.ZK_I18N || {};
+  function tr(key, fallback) { return I18N[key] != null ? I18N[key] : fallback; }
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
@@ -47,6 +49,15 @@
     if (open) { var f = $(FOCUSABLE, modelsPanel); if (f) f.focus(); } else if (doc.activeElement && modelsPanel.contains(doc.activeElement)) modelsTrigger.focus();
   }
 
+  /* ----- selector de idioma ----- */
+  var langBtn = $(".lang-btn"), langMenu = $("#langMenu");
+  function toggleLang(open) {
+    if (!langBtn || !langMenu) return;
+    langMenu.hidden = !open;
+    langBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) { var f = $("a", langMenu); if (f) f.focus(); }
+  }
+
   /* ----- menú móvil ----- */
   var mobileMenu = $("#mobileMenu");
   var burger = $("[data-open-menu]");
@@ -82,7 +93,7 @@
   /* ----- modal de contacto ----- */
   var modal = $("#contactModal");
   var lastFocus = null;
-  var MODES = {
+  var MODES = I18N.modes || {
     "test-drive": { eyebrow: "Prueba de manejo", title: "Agendá tu prueba de manejo", sub: "Elegí el modelo y un asesor coordina con vos día, hora y lugar.", channels: "¿Preferís hablar ahora?", submit: "Agendar prueba de manejo", tipo: "Prueba de manejo", done: "Registramos tu solicitud de prueba de manejo." },
     "contacto": { eyebrow: "Contacto", title: "Contáctanos", sub: "Elegí cómo preferís hablar con nosotros.", channels: "Llamanos o escribinos", submit: "Enviar consulta", tipo: "Consulta", done: "Registramos tu consulta." }
   };
@@ -125,6 +136,8 @@
   /* ----- delegación de clicks ----- */
   doc.addEventListener("click", function (e) {
     var t = e.target;
+    if (t.closest(".lang-btn")) { e.preventDefault(); toggleLang(langMenu.hidden); return; }
+    if (langMenu && !langMenu.hidden && !t.closest(".lang")) toggleLang(false);
     if (t.closest("[data-toggle-models]")) { e.preventDefault(); toggleModels(modelsPanel.hidden); return; }
     if (t.closest("[data-close-models]")) { toggleModels(false); return; }
     if (modelsPanel && !modelsPanel.hidden && !t.closest("#modelsPanel")) toggleModels(false);
@@ -140,7 +153,7 @@
     if (t.closest("[data-close-menu]")) { if (t.closest("button")) e.preventDefault(); closeMenu(); }
   });
   doc.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") { closeContact(); closeMenu(); toggleModels(false); return; }
+    if (e.key === "Escape") { closeContact(); closeMenu(); toggleModels(false); toggleLang(false); return; }
     if (modal && !modal.hidden) trapTab(e, $(".modal-panel", modal));
     else if (mobileMenu && !mobileMenu.hidden) trapTab(e, mobileMenu);
   });
@@ -164,13 +177,14 @@
     if (err) { if (on) input.setAttribute("aria-describedby", err.id); else input.removeAttribute("aria-describedby"); }
   }
   function waUrl(form) {
-    var labels = { nombre: "Nombre", telefono: "Teléfono", modelo: "Modelo de interés", mensaje: "Mensaje" };
+    var labels = I18N.waLabels || { nombre: "Nombre", telefono: "Teléfono", modelo: "Modelo de interés", mensaje: "Mensaje" };
     var lines = ["nombre", "telefono", "modelo", "mensaje"].map(function (k) {
       var el = form.elements[k]; return el && el.value.trim() ? labels[k] + ": " + el.value.trim() : null;
     }).filter(Boolean);
-    lines.push("Origen: zeekrlife.com.py");
+    lines.push(tr("origin", "Origen") + ": zeekrlife.com.py");
     var tipo = form.elements.tipo ? form.elements.tipo.value : "Prueba de manejo";
-    var intro = tipo === "Consulta" ? "Hola ZEEKR Paraguay, quiero hacer una consulta." : "Hola ZEEKR Paraguay, quiero coordinar una prueba de manejo.";
+    var intros = I18N.waIntro || { "Consulta": "Hola ZEEKR Paraguay, quiero hacer una consulta.", "Prueba de manejo": "Hola ZEEKR Paraguay, quiero coordinar una prueba de manejo." };
+    var intro = intros[tipo] || intros["Prueba de manejo"];
     var text = intro + "\n" + lines.join("\n");
     return "https://wa.me/" + form.getAttribute("data-wa") + "?text=" + encodeURIComponent(text);
   }
@@ -179,7 +193,7 @@
     if (!box) return;
     var first = (form.elements.nombre.value.trim().split(/\s+/)[0] || "").replace(/^./, function (c) { return c.toUpperCase(); });
     box.querySelector("[data-success-name]").textContent = first;
-    box.querySelector("[data-success-advisor]").textContent = data && data.asesor ? data.asesor + " te contacta en el día." : "Un asesor te contacta en el día.";
+    box.querySelector("[data-success-advisor]").textContent = data && data.asesor ? tr("advisor", "{name} te contacta en el día.").replace("{name}", data.asesor) : tr("advisorDefault", "Un asesor te contacta en el día.");
     box.querySelector("[data-success-wa]").href = wa;
     form.hidden = true;
     ["modal-channels", "modal-sub", "modal-or-form"].forEach(function (k) { var el = form.parentNode.querySelector("." + k); if (el) el.hidden = true; });
@@ -201,17 +215,18 @@
     var okTel = (tel.value.replace(/\D/g, "").length >= 6);
     setError(nombre, !okName); setError(tel, !okTel);
     var status = $(".form-status", form);
-    if (!okName || !okTel) { (okName ? tel : nombre).focus(); if (status) status.textContent = "Revisá los campos marcados para continuar."; return; }
+    if (!okName || !okTel) { (okName ? tel : nombre).focus(); if (status) status.textContent = tr("fix", "Revisá los campos marcados para continuar."); return; }
     var btn = form.querySelector("[type=submit]");
     var wa = waUrl(form);
     var payload = {
       nombre: nombre.value.trim(), telefono: tel.value.trim(),
       modelo: form.elements.modelo.value, mensaje: (form.elements.mensaje.value || "").trim() || null,
       tipo: form.elements.tipo ? form.elements.tipo.value : "Prueba de manejo",
-      pagina: location.href.split("#")[0], website: form.elements.website ? form.elements.website.value : ""
+      pagina: location.href.split("#")[0], website: form.elements.website ? form.elements.website.value : "",
+      idioma: form.elements.idioma ? form.elements.idioma.value : doc.documentElement.lang
     };
     var u = utms(); UTM_KEYS.forEach(function (k) { if (u[k]) payload[k] = u[k]; });
-    btn.disabled = true; btn.querySelector("span").textContent = "Enviando…";
+    btn.disabled = true; btn.querySelector("span").textContent = tr("sending", "Enviando…");
     if (status) status.textContent = "";
     var ctrl = ("AbortController" in window) ? new AbortController() : null;
     var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, 12000);
@@ -228,7 +243,7 @@
         /* respaldo: el lead no se pierde, va directo por WhatsApp */
         if (window.gtag) window.gtag("event", "generate_lead", { method: "whatsapp_fallback", model: payload.modelo });
         window.open(wa, "_blank", "noopener");
-        if (status) status.textContent = "No pudimos registrar la consulta en el sistema; te llevamos a WhatsApp para que un asesor te atienda igual.";
+        if (status) status.textContent = tr("fallback", "No pudimos registrar la consulta en el sistema; te llevamos a WhatsApp para que un asesor te atienda igual.");
         btn.disabled = false; btn.querySelector("span").textContent = btn.getAttribute("data-label");
       });
   }
@@ -266,7 +281,7 @@
         if (i === idx) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current");
       });
       if (counter) counter.textContent = String(idx + 1).padStart(2, "0");
-      if (announce && status) status.textContent = "Diapositiva " + (idx + 1) + " de " + slides.length + ": " + $(".slide-title", slides[idx]).textContent;
+      if (announce && status) status.textContent = tr("slide", "Diapositiva {n} de {t}: {title}").replace("{n}", idx + 1).replace("{t}", slides.length).replace("{title}", $(".slide-title", slides[idx]).textContent);
     }
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
     function play() {
@@ -280,7 +295,7 @@
       if (track) track.setAttribute("aria-live", paused ? "polite" : "off");
       if (playBtn) {
         playBtn.setAttribute("aria-pressed", userPaused ? "true" : "false");
-        playBtn.setAttribute("aria-label", userPaused ? "Reanudar reproducción automática" : "Pausar reproducción automática");
+        playBtn.setAttribute("aria-label", userPaused ? tr("resume", "Reanudar reproducción automática") : tr("pause", "Pausar reproducción automática"));
       }
     }
     function go(n, announce) { show(n, announce); play(); }
@@ -322,7 +337,7 @@
     function sync() {
       var paused = video.paused;
       if (section) section.classList.toggle("is-paused", paused);
-      if (btn) { btn.setAttribute("aria-pressed", paused ? "true" : "false"); btn.setAttribute("aria-label", paused ? "Reproducir video" : "Pausar video"); }
+      if (btn) { btn.setAttribute("aria-pressed", paused ? "true" : "false"); btn.setAttribute("aria-label", paused ? tr("videoPlay", "Reproducir video") : tr("videoPause", "Pausar video")); }
     }
     function tryPlay() { if (userPaused) return; var p = video.play(); if (p && p.catch) p.catch(function () {}); }
     if (btn) btn.addEventListener("click", function () { userPaused = !video.paused; if (video.paused) tryPlay(); else video.pause(); });

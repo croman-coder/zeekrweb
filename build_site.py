@@ -5,17 +5,18 @@ Arquitectura visual de zeekrlife.com/es-mx (hero slider fullscreen, modelos
 fullscreen con indicadores, noticias sobre blanco, footer negro) con contenido
 de ZEEKR Paraguay. Tipografía oficial ZeekrHeadline / ZeekrText.
 
-Salida (URLs limpias):
-  /                      index.html
-  /modelos/              modelos/index.html
-  /modelos/zeekr-001/    modelos/zeekr-001/index.html   (idem zeekr-x, zeekr-7x)
-  /noticias/             noticias/index.html
-  /noticias/<slug>/      artículos con cuerpo (eventos propios)
-  /nosotros/             nosotros/index.html
-  /404.html, sitemap.xml, robots.txt, site.webmanifest, favicon.svg, icons/
+Multilenguaje (estático, una URL por idioma, hreflang):
+  es (raíz)  /  /modelos/zeekr-7x/  /noticias/  /nosotros/
+  en         /en/  /en/models/zeekr-7x/  /en/news/  /en/about/
+  pt         /pt/  /pt/modelos/zeekr-7x/  /pt/noticias/  /pt/sobre/
+  zh         /zh/  /zh/models/zeekr-7x/  /zh/news/  /zh/about/
 
-Además genera derivados de imagen responsive (WebP + JPEG/PNG) en images/_opt/
-e imágenes Open Graph 1200×630 en images/_opt/og/.
+Los textos se escriben en español y se envuelven en _(); las traducciones viven en
+i18n.py (clave = texto español). Si falta una traducción se usa el español y se
+reporta al final del build.
+
+Además genera derivados de imagen responsive (WebP + JPEG/PNG) en images/_opt/,
+imágenes Open Graph en images/_opt/og/, íconos, sitemap, robots, _redirects/_headers.
 
 Ejecutar: python3 build_site.py
 """
@@ -27,6 +28,8 @@ import re
 import unicodedata
 
 from PIL import Image, ImageDraw, ImageFile, ImageOps
+
+from i18n import TRANSLATIONS
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -46,7 +49,57 @@ PHONES = [
 ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(ROOT)
 
-PAGES = []  # (url_path, lastmod) para el sitemap
+# ------------------------------------------------------------------ idiomas
+LANGS = {
+    "es": {"html": "es-PY", "hreflang": "es-PY", "og": "es_PY", "name": "Español", "short": "ES",
+           "slugs": {"modelos": "modelos", "noticias": "noticias", "nosotros": "nosotros"}},
+    "en": {"html": "en", "hreflang": "en", "og": "en_US", "name": "English", "short": "EN",
+           "slugs": {"modelos": "models", "noticias": "news", "nosotros": "about"}},
+    "pt": {"html": "pt-BR", "hreflang": "pt-BR", "og": "pt_BR", "name": "Português", "short": "PT",
+           "slugs": {"modelos": "modelos", "noticias": "noticias", "nosotros": "sobre"}},
+    "zh": {"html": "zh-Hans", "hreflang": "zh-Hans", "og": "zh_CN", "name": "中文", "short": "中文",
+           "slugs": {"modelos": "models", "noticias": "news", "nosotros": "about"}},
+}
+L = "es"                     # idioma en construcción
+MISSING = {k: set() for k in LANGS}
+PAGES = []                   # (path, lastmod, alternates) para el sitemap
+
+
+def _(s):
+    """Traduce un texto español al idioma en construcción (fallback: español)."""
+    if L == "es" or not s:
+        return s
+    t = TRANSLATIONS.get(L, {}).get(s)
+    if t is None:
+        MISSING[L].add(s)
+        return s
+    return t
+
+
+def prefix(lang=None):
+    lang = lang or L
+    return "" if lang == "es" else f"/{lang}"
+
+
+def url_home(lang=None):
+    return prefix(lang) + "/"
+
+
+def url_section(sec, lang=None):
+    lang = lang or L
+    return f"{prefix(lang)}/{LANGS[lang]['slugs'][sec]}/"
+
+
+def url_model(key, lang=None):
+    return f"{url_section('modelos', lang)}{MODELS[key]['slug']}/"
+
+
+def url_news(n, lang=None):
+    return f"{url_section('noticias', lang)}{n['slug']}/" if n.get("body") else None
+
+
+def alternates(fn):
+    return {lang: fn(lang) for lang in LANGS}
 
 
 # ----------------------------------------------------------------- utilidades
@@ -61,13 +114,20 @@ def file_hash(path):
         return hashlib.sha1(fh.read()).hexdigest()[:8]
 
 
-MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
-         "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+MESES = {
+    "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+    "pt": ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"],
+    "en": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+}
 
 
 def fecha_larga(iso):
     d = _dt.date.fromisoformat(iso)
-    return f"{d.day} de {MESES[d.month - 1]} de {d.year}"
+    if L == "en":
+        return f"{MESES['en'][d.month - 1]} {d.day}, {d.year}"
+    if L == "zh":
+        return f"{d.year}年{d.month}月{d.day}日"
+    return f"{d.day} de {MESES[L][d.month - 1]} de {d.year}"
 
 
 def esc(s):
@@ -123,7 +183,6 @@ def picture(src, alt, widths, sizes="100vw", cls="", img_cls="", loading="lazy",
     fmt_fb = "png" if alpha else "jpeg"
     web = [_derivative(src, w, "webp", alpha) for w in widths]
     srcset_w = ", ".join(f"{u} {w}w" for u, w, h in web)
-    # fallback (navegadores sin WebP, <1 %): un solo JPEG/PNG en el tamaño intermedio
     fb_src = _derivative(src, widths[len(widths) // 2], fmt_fb, alpha)
     sources = ""
     if mobile:
@@ -169,16 +228,13 @@ WORDMARK_SVG = ('<svg class="wordmark" width="114" height="14" viewBox="0 0 114 
 
 ICON_ARROW = '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h11M10.5 5.5 15 10l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 ICON_WA = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2m0 18.15c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24s8.24 3.7 8.24 8.24-3.7 8.24-8.23 8.24m4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43s.17-.25.25-.41c.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18s-.22-.16-.47-.28"/></svg>'
-ICON_PHONE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
 ICON_PLAY = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6 4.5v11l9-5.5z" fill="currentColor"/></svg>'
 ICON_PAUSE = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6 4.5h3v11H6zm5 0h3v11h-3z" fill="currentColor"/></svg>'
-ICON_CHEV_L = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-ICON_CHEV_R = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9.5 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 ICON_DOWNLOAD = '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15.5h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+ICON_GLOBE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 12h18M12 3c3 3.5 3 14 0 18M12 3c-3 3.5-3 14 0 18" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>'
 
 
 def _logo_polys(scale, off):
-    """Polígonos del isotipo (cuadro con dos recortes)."""
     def pts(seq):
         return [(off + x * scale, off + y * scale) for x, y in seq]
     right = pts([(25.6667, 25.6667), (18.6667, 25.6667), (18.6667, 17.0226), (11.6667, 10.027), (11.6667, 2.33114), (25.6667, 2.33114)])
@@ -187,7 +243,7 @@ def _logo_polys(scale, off):
 
 
 def render_logo_png(size, fg, bg, pad_ratio=0.22):
-    ss = 4  # supersampling
+    ss = 4
     S = size * ss
     im = Image.new("RGBA", (S, S), bg)
     d = ImageDraw.Draw(im)
@@ -204,7 +260,6 @@ def build_icons():
     black = (10, 10, 10, 255)
     white = (255, 255, 255, 255)
     clear = (0, 0, 0, 0)
-    # Favicon: isotipo negro sobre transparente (como la marca)
     render_logo_png(180, black, white).convert("RGB").save("icons/apple-touch-icon.png", optimize=True)
     render_logo_png(192, black, white).convert("RGB").save("icons/icon-192.png", optimize=True)
     render_logo_png(512, black, white).convert("RGB").save("icons/icon-512.png", optimize=True)
@@ -225,8 +280,6 @@ def build_icons():
         ],
     }
     json.dump(manifest, open("site.webmanifest", "w"), ensure_ascii=False, indent=1)
-    if os.path.exists("favicon.png"):
-        os.remove("favicon.png")
     print("OK icons")
 
 
@@ -290,12 +343,36 @@ MODELS = {
 }
 MODEL_ORDER = ["7x", "x", "001"]
 
-
-def model_url(key):
-    return f"/modelos/{MODELS[key]['slug']}/"
-
-
 NEWS = [
+    {
+        "slug": "lanzamiento-zeekr-7x-ciudad-del-este",
+        "date": "2026-09-19",
+        "kicker": "Evento · Ciudad del Este",
+        "title": "El ZEEKR 7X llegó a Ciudad del Este",
+        "lead": "Santa Rosa Paraguay presentó el ZEEKR 7X en Ciudad del Este: una noche con invitados y prensa, y el SUV eléctrico de próxima generación develado en vivo.",
+        "place": "Ciudad del Este",
+        "place_locality": "Ciudad del Este",
+        "quote": ("El futuro no se parece a nada de lo que conocés.", None, "Pantalla del lanzamiento"),
+        "quote_pos": 0,
+        "img": "images/noticias/cde-2026/01-zeekr-7x-portada.jpg",
+        "img_pos": "50% 55%",
+        "body": [
+            "Con esa frase en pantalla y el vehículo aún cubierto arrancó la presentación ante los invitados del Este del país. Agustín Varela, Director País, presentó la marca y el modelo antes del develado del ZEEKR 7X.",
+            "Los asistentes recorrieron el interior, probaron la cabina digital y conocieron de cerca las dos versiones —Smart y Performance—, con su sistema de 800 V y hasta 543 km de autonomía (WLTP). Ciudad del Este suma así su primera experiencia ZEEKR en vivo. Agendá tu prueba de manejo y descubrí el SUV eléctrico de próxima generación.",
+        ],
+        "gallery": [
+            ("images/noticias/cde-2026/02-develado-pantalla.jpg", "El ZEEKR 7X cubierto antes del develado, con la frase del lanzamiento en pantalla"),
+            ("images/noticias/cde-2026/03-agustin-varela.jpg", "Agustín Varela, Director País, durante la presentación"),
+            ("images/noticias/cde-2026/04-conduccion.jpg", "Conducción del evento de lanzamiento"),
+            ("images/noticias/cde-2026/05-cartel-7x.jpg", "Cartel ZEEKR 7X y pantalla en el acceso al evento"),
+            ("images/noticias/cde-2026/06-photo-wall.jpg", "Invitados en el photo wall ZEEKR 7X"),
+            ("images/noticias/cde-2026/07-interior-ambiente.jpg", "Interior del ZEEKR 7X con luz ambiental"),
+            ("images/noticias/cde-2026/08-volante-pantalla.jpg", "Volante y pantalla central del ZEEKR 7X"),
+            ("images/noticias/cde-2026/09-interior-conductor.jpg", "Puesto de conducción del ZEEKR 7X"),
+            ("images/noticias/cde-2026/10-insignia.jpg", "Insignia ZEEKR sobre la carrocería"),
+        ],
+        "cta_model": "7x",
+    },
     {
         "slug": "lanzamiento-zeekr-7x-alma",
         "date": "2026-07-28",
@@ -303,11 +380,12 @@ NEWS = [
         "title": "ZEEKR 7X: así fue su lanzamiento en Paraguay",
         "lead": "Santa Rosa Paraguay presentó oficialmente el ZEEKR 7X en una noche exclusiva en Alma, Asunción, con invitados, prensa y el nuevo SUV eléctrico de próxima generación como protagonista.",
         "place": "Alma, Asunción",
+        "place_locality": "Asunción",
         "quote": ("Paraguay tiene un enorme potencial; su dinamismo económico lo convierte en un escenario ideal para adoptar nuevas tecnologías en movilidad.", "Manuel Antelo", "Grupo Antelo"),
         "img": "images/noticias/alma-2026/01-zeekr-7x-alma.jpg",
         "body": [
             "La velada reunió a clientes, aliados y medios de comunicación en un espacio pensado para vivir la marca de cerca: diseño escandinavo, tecnología de vanguardia y la experiencia ZEEKR en primera persona.",
-            "El ZEEKR 7X se develó ante los invitados con una presentación de sus dos versiones —Smart y Performance— y de sus tecnologías clave: sistema de alto voltaje de 800 V, cabina con procesador Qualcomm Snapdragon 8295, pantalla central Mini-LED de 16″ y una autonomía de hasta 543 km (WLTP).",
+            "El ZEEKR 7X se develó ante los invitados con una presentación de sus dos versiones —Smart y Performance— y de sus tecnologías clave: sistema de alto voltaje de 800 V, cabina con procesador Qualcomm Snapdragon 8295, pantalla central Mini-LED de 16″ y una autonomía de hasta 543 km (WLTP).",
             "Los asistentes recorrieron el interior del vehículo, conocieron sus materiales y descubrieron un espacio interior de categoría superior, mientras la música en vivo acompañó la noche.",
             "El ZEEKR 7X ya se puede conocer en Paraguay. Agendá tu prueba de manejo y descubrí por qué es el SUV eléctrico de próxima generación.",
         ],
@@ -323,25 +401,6 @@ NEWS = [
         ],
         "cta_model": "7x",
     },
-    {
-        "slug": "lanzamiento-zeekr-7x-ciudad-del-este",
-        "date": "2026-09-19",
-        "kicker": "Evento · Ciudad del Este",
-        "title": "El ZEEKR 7X llegó a Ciudad del Este",
-        "lead": "Santa Rosa Paraguay presentó el ZEEKR 7X en Ciudad del Este: una noche con invitados y prensa, y el SUV eléctrico de próxima generación develado en vivo.",
-        "place": "Ciudad del Este",
-        "place_locality": "Ciudad del Este",
-        "quote": ("El futuro no se parece a nada de lo que conocés.", None, "Pantalla del lanzamiento"),
-        "quote_pos": 0,
-        "img": "images/hero/7x-desktop.jpg",
-        "img_pos": "60% 50%",
-        "body": [
-            "Con esa frase en pantalla y el vehículo aún cubierto arrancó la presentación ante los invitados del Este del país. Agustín Varela, Director País, presentó la marca y el modelo antes del develado del ZEEKR 7X.",
-            "Los asistentes recorrieron el interior, probaron la cabina digital y conocieron de cerca las dos versiones —Smart y Performance—, con su sistema de 800 V y hasta 543 km de autonomía (WLTP). Ciudad del Este suma así su primera experiencia ZEEKR en vivo. Agendá tu prueba de manejo y descubrí el SUV eléctrico de próxima generación.",
-        ],
-        "gallery": [],
-        "cta_model": "7x",
-    },
     {"date": "2025-01-08", "title": "ZEEKR en CES 2025: tecnología líder en la industria, estrategia de co-creación y una solución energética global", "img": "images/noticias/ces-2025.png", "kicker": "ZEEKR Global"},
     {"date": "2025-01-06", "title": "ZEEKR amplía su asociación con Qualcomm para ofrecer una experiencia de entretenimiento inmersiva en los vehículos del futuro", "img": "images/noticias/asociacion-qualcomm.png", "kicker": "ZEEKR Global"},
     {"date": "2024-12-13", "title": "ZEEKR 001: luces inteligentes para iluminar tu camino", "img": "images/noticias/luces-inteligentes.png", "kicker": "Tecnología"},
@@ -352,13 +411,8 @@ NEWS = [
     {"date": "2024-05-10", "title": "Un hito en el viaje global de ZEEKR: la compañía completa su oferta pública inicial en la Bolsa de Nueva York", "img": "images/noticias/noticia1.jpg", "kicker": "ZEEKR Global"},
     {"date": "2024-04-09", "title": "ZEEKR M-Vision, un concepto completamente reimaginado para el futuro de la movilidad", "img": "images/noticias/noticia2.png", "kicker": "Concepto"},
 ]
-NEWS = [n for n in NEWS if not n.get("draft")]  # borradores (sin fotos/fecha confirmadas) no se publican
+NEWS = [n for n in NEWS if not n.get("draft")]
 NEWS.sort(key=lambda n: n["date"], reverse=True)
-
-
-def news_url(n):
-    return f"/noticias/{n['slug']}/" if n.get("body") else None
-
 
 HOME_FAQ = [
     ("¿Qué modelos ZEEKR están disponibles en Paraguay?", "ZEEKR 001 (crossover eléctrico de lujo), ZEEKR X (SUV urbano premium) y ZEEKR 7X (SUV de próxima generación). Podés conocer cada modelo en detalle y agendar una prueba de manejo."),
@@ -378,189 +432,233 @@ def btn(label, href=None, kind="cream", extra="", icon=None, attrs=""):
     return f'<button class="{cls}" type="button"{attrs}>{inner}</button>'
 
 
-def header(active=""):
+def lang_switcher(alts):
+    """Selector de idioma: enlaces a la misma página en cada idioma."""
+    items = "".join(
+        f'<li><a href="{alts[k]}" lang="{LANGS[k]["html"]}" hreflang="{LANGS[k]["hreflang"]}"{" aria-current=\"true\"" if k == L else ""}>{LANGS[k]["name"]}</a></li>'
+        for k in LANGS)
+    return f'''<div class="lang" data-lang>
+        <button class="menu-link lang-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="langMenu" aria-label="{esc(_("Idioma"))}: {LANGS[L]["name"]}">{ICON_GLOBE}<span>{LANGS[L]["short"]}</span></button>
+        <ul class="lang-menu" id="langMenu" hidden>{items}</ul>
+      </div>'''
+
+
+def mobile_langs(alts):
+    return '<div class="mm-langs" aria-label="' + esc(_("Idioma")) + '">' + "".join(
+        f'<a href="{alts[k]}" lang="{LANGS[k]["html"]}" hreflang="{LANGS[k]["hreflang"]}"{" aria-current=\"true\"" if k == L else ""}>{LANGS[k]["short"]}</a>' for k in LANGS) + "</div>"
+
+
+def header(active="", alts=None):
+    alts = alts or alternates(url_home)
+
     def cls(a):
         return "menu-link is-active" if a == active else "menu-link"
     gates = "\n".join(
-        f'''        <a class="gate-card" href="{model_url(k)}">
+        f'''        <a class="gate-card" href="{url_model(k)}">
           {picture(f"images/menu/zeekr_{k}.png", MODELS[k]["name"], (300, 600), sizes="260px", alpha=True)}
           <span class="gate-name">{MODELS[k]["name"]}</span>
-          <span class="gate-sub">{MODELS[k]["eyebrow"]}</span>
+          <span class="gate-sub">{_(MODELS[k]["eyebrow"])}</span>
         </a>''' for k in ["001", "x", "7x"])
     return f'''
-<a class="skip-link" href="#main">Saltar al contenido</a>
+<a class="skip-link" href="#main">{_("Saltar al contenido")}</a>
 <header class="site-header" id="siteHeader">
   <div class="header-inner">
     <div class="header-left">
-      <a class="header-logo" href="/" aria-label="ZEEKR Paraguay — Inicio">{LOGO_SVG}</a>
-      <nav class="header-menus" aria-label="Principal">
-        <button class="menu-link models-trigger {cls('modelos')}" type="button" aria-expanded="false" aria-controls="modelsPanel" data-toggle-models>Modelos</button>
-        <a class="{cls('nosotros')}" href="/nosotros/">Nosotros</a>
-        <a class="{cls('noticias')}" href="/noticias/">Noticias</a>
+      <a class="header-logo" href="{url_home()}" aria-label="{esc(_("ZEEKR Paraguay — Inicio"))}">{LOGO_SVG}</a>
+      <nav class="header-menus" aria-label="{esc(_("Principal"))}">
+        <button class="menu-link models-trigger {cls('modelos')}" type="button" aria-expanded="false" aria-controls="modelsPanel" data-toggle-models>{_("Modelos")}</button>
+        <a class="{cls('nosotros')}" href="{url_section('nosotros')}">{_("Nosotros")}</a>
+        <a class="{cls('noticias')}" href="{url_section('noticias')}">{_("Noticias")}</a>
       </nav>
     </div>
-    <a class="header-wordmark" href="/" aria-label="ZEEKR Paraguay — Inicio">{WORDMARK_SVG}</a>
+    <a class="header-wordmark" href="{url_home()}" aria-label="{esc(_("ZEEKR Paraguay — Inicio"))}">{WORDMARK_SVG}</a>
     <div class="header-right">
-      <button class="menu-link" type="button" data-open-contact data-intent="contacto">Contáctanos</button>
-      <a class="header-wa" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" aria-label="WhatsApp ZEEKR Paraguay">{ICON_WA}</a>
-      <button class="burger" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobileMenu" data-open-menu><span></span><span></span></button>
+      <button class="menu-link" type="button" data-open-contact data-intent="contacto">{_("Contáctanos")}</button>
+      <a class="header-wa" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" aria-label="{esc(_("WhatsApp ZEEKR Paraguay"))}">{ICON_WA}</a>
+      {lang_switcher(alts)}
+      <button class="burger" type="button" aria-label="{esc(_("Abrir menú"))}" aria-expanded="false" aria-controls="mobileMenu" data-open-menu><span></span><span></span></button>
     </div>
   </div>
   <div class="models-panel" id="modelsPanel" hidden>
     <div class="models-panel-inner">
       <div class="models-panel-head">
-        <p class="models-heading">Modelos</p>
-        <a class="text-link" href="/modelos/">Ver todos los modelos {ICON_ARROW}</a>
+        <p class="models-heading">{_("Modelos")}</p>
+        <a class="text-link" href="{url_section('modelos')}">{_("Ver todos los modelos")} {ICON_ARROW}</a>
       </div>
 {gates}
     </div>
   </div>
   <div class="mobile-menu" id="mobileMenu" hidden>
     <div class="mobile-menu-head">
-      <a href="/" aria-label="ZEEKR Paraguay — Inicio">{LOGO_SVG}</a>
-      <button class="mm-close" type="button" aria-label="Cerrar menú" data-close-menu><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <a href="{url_home()}" aria-label="{esc(_("ZEEKR Paraguay — Inicio"))}">{LOGO_SVG}</a>
+      <button class="mm-close" type="button" aria-label="{esc(_("Cerrar menú"))}" data-close-menu><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     </div>
-    <nav aria-label="Menú móvil">
-      <p class="mm-eyebrow">Modelos</p>
-      <a data-close-menu href="{model_url('7x')}">ZEEKR 7X</a>
-      <a data-close-menu href="{model_url('x')}">ZEEKR X</a>
-      <a data-close-menu href="{model_url('001')}">ZEEKR 001</a>
-      <p class="mm-eyebrow">Marca</p>
-      <a data-close-menu href="/noticias/">Noticias</a>
-      <a data-close-menu href="/nosotros/">Nosotros</a>
+    <nav aria-label="{esc(_("Menú móvil"))}">
+      <p class="mm-eyebrow">{_("Modelos")}</p>
+      <a data-close-menu href="{url_model('7x')}">ZEEKR 7X</a>
+      <a data-close-menu href="{url_model('x')}">ZEEKR X</a>
+      <a data-close-menu href="{url_model('001')}">ZEEKR 001</a>
+      <p class="mm-eyebrow">{_("Marca")}</p>
+      <a data-close-menu href="{url_section('noticias')}">{_("Noticias")}</a>
+      <a data-close-menu href="{url_section('nosotros')}">{_("Nosotros")}</a>
     </nav>
+    {mobile_langs(alts)}
     <div class="mm-actions">
-      {btn("Agendá tu prueba de manejo", kind="accent", attrs=' data-open-contact data-intent="test-drive"')}
-      {btn("Contáctanos", kind="outline", attrs=' data-open-contact data-intent="contacto"')}
+      {btn(_("Agendá tu prueba de manejo"), kind="accent", attrs=' data-open-contact data-intent="test-drive"')}
+      {btn(_("Contáctanos"), kind="outline", attrs=' data-open-contact data-intent="contacto"')}
     </div>
   </div>
 </header>
 <div class="nav-shade" data-close-models hidden></div>
-<div class="cookie-banner" id="cookieBanner" hidden role="dialog" aria-label="Consentimiento de cookies">
+<div class="cookie-banner" id="cookieBanner" hidden role="dialog" aria-label="{esc(_("Consentimiento de cookies"))}">
   <div class="cookie-inner">
-    <p class="cookie-text">Cuando visitás nuestro sitio web (“Plataformas ZEEKR”), utilizamos cookies y otras tecnologías de seguimiento similares para mejorar la funcionalidad de las Plataformas ZEEKR, el rendimiento, medir el tráfico del sitio web, analizar el comportamiento del usuario y ajustar nuestro contenido y servicios. Si hacés clic en “Aceptar todo” nos autorizás a procesar tus datos personales para tales fines. Si hacés clic en “Rechazar todo” solo utilizaremos cookies y tecnologías estrictamente necesarias para la funcionalidad de la Plataforma ZEEKR. Para más información o para consentir cookies específicas, hacé clic en “Configuración de cookies”.</p>
+    <p class="cookie-text">{_("Cuando visitás nuestro sitio web (“Plataformas ZEEKR”), utilizamos cookies y otras tecnologías de seguimiento similares para mejorar la funcionalidad de las Plataformas ZEEKR, el rendimiento, medir el tráfico del sitio web, analizar el comportamiento del usuario y ajustar nuestro contenido y servicios. Si hacés clic en “Aceptar todo” nos autorizás a procesar tus datos personales para tales fines. Si hacés clic en “Rechazar todo” solo utilizaremos cookies y tecnologías estrictamente necesarias para la funcionalidad de la Plataforma ZEEKR. Para más información o para consentir cookies específicas, hacé clic en “Configuración de cookies”.")}</p>
     <div class="cookie-actions">
-      <button class="btn btn-outline-dark" type="button" data-cookie-settings aria-expanded="false" aria-controls="cookieSettings">Configuración de cookies</button>
-      <button class="btn btn-dark" type="button" data-cookie-reject>Rechazar todo</button>
-      <button class="btn btn-dark" type="button" data-cookie-accept>Aceptar todo</button>
+      <button class="btn btn-outline-dark" type="button" data-cookie-settings aria-expanded="false" aria-controls="cookieSettings">{_("Configuración de cookies")}</button>
+      <button class="btn btn-dark" type="button" data-cookie-reject>{_("Rechazar todo")}</button>
+      <button class="btn btn-dark" type="button" data-cookie-accept>{_("Aceptar todo")}</button>
     </div>
     <div class="cookie-settings" id="cookieSettings" hidden>
-      <label class="check"><input type="checkbox" checked disabled><span>Necesarias (siempre activas)</span></label>
-      <label class="check"><input type="checkbox" id="ckAnalytics" checked><span>Analíticas y rendimiento (Google Analytics)</span></label>
-      <button class="btn btn-dark" type="button" data-cookie-save>Guardar preferencias</button>
+      <label class="check"><input type="checkbox" checked disabled><span>{_("Necesarias (siempre activas)")}</span></label>
+      <label class="check"><input type="checkbox" id="ckAnalytics" checked><span>{_("Analíticas y rendimiento (Google Analytics)")}</span></label>
+      <button class="btn btn-dark" type="button" data-cookie-save>{_("Guardar preferencias")}</button>
     </div>
   </div>
 </div>'''
 
 
 def footer():
-    phones = "".join(f'<li><a href="tel:{tel}"><span class="ph-kind">{kind}</span> {num}</a></li>' for kind, num, tel in PHONES)
+    phones = "".join(f'<li><a href="tel:{tel}"><span class="ph-kind">{_(kind)}</span> {num}</a></li>' for kind, num, tel in PHONES)
     return f'''
 <footer class="site-footer">
   <div class="footer-grid">
     <div class="footer-brand">
-      <a class="footer-logo" href="/" aria-label="ZEEKR Paraguay — Inicio">{LOGO_SVG}{WORDMARK_SVG}</a>
-      <p class="footer-tag">Distribuidor oficial ZEEKR en Paraguay.<br>Santa Rosa Paraguay.</p>
+      <a class="footer-logo" href="{url_home()}" aria-label="{esc(_("ZEEKR Paraguay — Inicio"))}">{LOGO_SVG}{WORDMARK_SVG}</a>
+      <p class="footer-tag">{_("Distribuidor oficial ZEEKR en Paraguay.")}<br>Santa Rosa Paraguay.</p>
     </div>
-    <nav class="footer-col" aria-label="Modelos">
-      <p class="footer-title">Modelos</p>
+    <nav class="footer-col" aria-label="{esc(_("Modelos"))}">
+      <p class="footer-title">{_("Modelos")}</p>
       <ul>
-        <li><a href="{model_url('7x')}">ZEEKR 7X</a></li>
-        <li><a href="{model_url('x')}">ZEEKR X</a></li>
-        <li><a href="{model_url('001')}">ZEEKR 001</a></li>
-        <li><a href="/modelos/">Todos los modelos</a></li>
+        <li><a href="{url_model('7x')}">ZEEKR 7X</a></li>
+        <li><a href="{url_model('x')}">ZEEKR X</a></li>
+        <li><a href="{url_model('001')}">ZEEKR 001</a></li>
+        <li><a href="{url_section('modelos')}">{_("Todos los modelos")}</a></li>
       </ul>
     </nav>
-    <nav class="footer-col" aria-label="Compañía">
-      <p class="footer-title">Compañía</p>
+    <nav class="footer-col" aria-label="{esc(_("Compañía"))}">
+      <p class="footer-title">{_("Compañía")}</p>
       <ul>
-        <li><a href="/nosotros/">Nosotros</a></li>
-        <li><a href="/noticias/">Noticias</a></li>
-        <li><button type="button" class="link-btn" data-open-contact data-intent="contacto">Contáctanos</button></li>
-        <li><button type="button" class="link-btn" data-open-contact data-intent="test-drive">Prueba de manejo</button></li>
+        <li><a href="{url_section('nosotros')}">{_("Nosotros")}</a></li>
+        <li><a href="{url_section('noticias')}">{_("Noticias")}</a></li>
+        <li><button type="button" class="link-btn" data-open-contact data-intent="contacto">{_("Contáctanos")}</button></li>
+        <li><button type="button" class="link-btn" data-open-contact data-intent="test-drive">{_("Prueba de manejo")}</button></li>
       </ul>
     </nav>
     <div class="footer-col">
-      <p class="footer-title">Atención a clientes</p>
+      <p class="footer-title">{_("Atención a clientes")}</p>
       <ul class="footer-phones">{phones}</ul>
     </div>
     <div class="footer-col footer-social">
-      <p class="footer-title">Seguinos</p>
+      <p class="footer-title">{_("Seguinos")}</p>
       <div class="social-row">
-        <a href="https://www.instagram.com/zeekrparaguay/" rel="noopener" target="_blank" aria-label="Instagram de ZEEKR Paraguay">
+        <a href="https://www.instagram.com/zeekrparaguay/" rel="noopener" target="_blank" aria-label="{esc(_("Instagram de ZEEKR Paraguay"))}">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg>
         </a>
-        <a href="https://wa.me/{WA_NUMBER}" rel="noopener" target="_blank" aria-label="WhatsApp de ZEEKR Paraguay">{ICON_WA}</a>
-        <a href="https://www.linkedin.com/company/zeekr" rel="noopener" target="_blank" aria-label="LinkedIn de ZEEKR">
+        <a href="https://wa.me/{WA_NUMBER}" rel="noopener" target="_blank" aria-label="{esc(_("WhatsApp de ZEEKR Paraguay"))}">{ICON_WA}</a>
+        <a href="https://www.linkedin.com/company/zeekr" rel="noopener" target="_blank" aria-label="{esc(_("LinkedIn de ZEEKR"))}">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M4.98 3.5A2.49 2.49 0 1 1 5 8.48a2.49 2.49 0 0 1-.02-4.98ZM3 9.75h4v11H3v-11Zm6.5 0h3.83v1.5h.05c.53-1 1.84-2.06 3.79-2.06 4.05 0 4.8 2.67 4.8 6.14v5.42h-4v-4.8c0-1.15-.02-2.63-1.6-2.63-1.6 0-1.85 1.25-1.85 2.55v4.88h-4v-11Z"/></svg>
         </a>
       </div>
     </div>
   </div>
   <div class="footer-bottom">
-    <p class="footer-copy">© 2026 ZEEKR y todos sus afiliados. Todos los derechos reservados · <span translate="no">ZEEKR Paraguay</span></p>
-    <p class="footer-disclaimer">Toda la información contenida en este material está basada en datos disponibles al momento de su publicación. Las fotos y pantallas son de carácter ilustrativo y de referencia. Los datos de autonomía y prestaciones se basan en ciclos de prueba (WLTP / pruebas de ingeniería) y pueden variar según clima, camino, carga, batería y configuración del vehículo.</p>
+    <p class="footer-copy">{_("© 2026 ZEEKR y todos sus afiliados. Todos los derechos reservados")} · <span translate="no">ZEEKR Paraguay</span></p>
+    <p class="footer-disclaimer">{_("Toda la información contenida en este material está basada en datos disponibles al momento de su publicación. Las fotos y pantallas son de carácter ilustrativo y de referencia. Los datos de autonomía y prestaciones se basan en ciclos de prueba (WLTP / pruebas de ingeniería) y pueden variar según clima, camino, carga, batería y configuración del vehículo.")}</p>
   </div>
 </footer>
 {contact_modal()}'''
 
 
 def contact_modal():
-    cards = "".join(f'<a class="contact-card" href="tel:{tel}"><span>{kind}</span><strong>{num}</strong></a>' for kind, num, tel in PHONES)
+    cards = "".join(f'<a class="contact-card" href="tel:{tel}"><span>{_(kind)}</span><strong>{num}</strong></a>' for kind, num, tel in PHONES)
     options = "".join(f'<option value="{MODELS[k]["name"]}">{MODELS[k]["name"]}</option>' for k in MODEL_ORDER)
     return f'''
 <div class="modal-contact" id="contactModal" hidden role="dialog" aria-modal="true" aria-labelledby="cmTitle">
   <div class="modal-mask" data-close-contact></div>
   <div class="modal-panel" tabindex="-1" data-mode="test-drive">
-    <button class="modal-close" type="button" aria-label="Cerrar" data-close-contact><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
-    <p class="eyebrow eyebrow-dark" data-m="eyebrow">Prueba de manejo</p>
-    <h2 id="cmTitle" data-m="title">Agendá tu prueba de manejo</h2>
-    <p class="modal-sub" data-m="sub">Elegí el modelo y un asesor coordina con vos día, hora y lugar.</p>
+    <button class="modal-close" type="button" aria-label="{esc(_("Cerrar"))}" data-close-contact><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <p class="eyebrow eyebrow-dark" data-m="eyebrow">{_("Prueba de manejo")}</p>
+    <h2 id="cmTitle" data-m="title">{_("Agendá tu prueba de manejo")}</h2>
+    <p class="modal-sub" data-m="sub">{_("Elegí el modelo y un asesor coordina con vos día, hora y lugar.")}</p>
     <div class="modal-channels">
-      <p class="modal-or" data-m="channels">¿Preferís hablar ahora?</p>
+      <p class="modal-or" data-m="channels">{_("¿Preferís hablar ahora?")}</p>
       <div class="contact-cards">{cards}</div>
-      <a class="btn btn-outline-dark btn-block" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" data-m-wa><span>Escribinos por WhatsApp</span>{ICON_WA}</a>
+      <a class="btn btn-outline-dark btn-block" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" data-m-wa><span>{_("Escribinos por WhatsApp")}</span>{ICON_WA}</a>
     </div>
-    <p class="modal-or modal-or-form" data-m="form" hidden>O dejanos tu consulta y te llamamos</p>
+    <p class="modal-or modal-or-form" data-m="form" hidden>{_("O dejanos tu consulta y te llamamos")}</p>
     <form id="waForm" class="contact-form" data-wa="{WA_NUMBER}" novalidate>
       <input type="hidden" name="tipo" value="Prueba de manejo">
+      <input type="hidden" name="idioma" value="{L}">
       <div class="field">
-        <label for="cf-nombre">Nombre y apellido</label>
-        <input id="cf-nombre" type="text" name="nombre" required autocomplete="name" placeholder="Ej.: Ana Martínez">
-        <p class="field-error" id="cf-nombre-error" hidden>Ingresá tu nombre para que podamos contactarte.</p>
+        <label for="cf-nombre">{_("Nombre y apellido")}</label>
+        <input id="cf-nombre" type="text" name="nombre" required autocomplete="name" placeholder="{esc(_("Ej.: Ana Martínez"))}">
+        <p class="field-error" id="cf-nombre-error" hidden>{_("Ingresá tu nombre para que podamos contactarte.")}</p>
       </div>
       <div class="field">
-        <label for="cf-tel">Teléfono</label>
-        <input id="cf-tel" type="tel" name="telefono" required autocomplete="tel" inputmode="tel" placeholder="Ej.: 0981 123 456">
-        <p class="field-error" id="cf-tel-error" hidden>Ingresá un teléfono válido (ej.: 0981 123 456).</p>
+        <label for="cf-tel">{_("Teléfono")}</label>
+        <input id="cf-tel" type="tel" name="telefono" required autocomplete="tel" inputmode="tel" placeholder="{esc(_("Ej.: 0981 123 456"))}">
+        <p class="field-error" id="cf-tel-error" hidden>{_("Ingresá un teléfono válido (ej.: 0981 123 456).")}</p>
       </div>
       <div class="field">
-        <label for="cf-modelo">Modelo de interés</label>
-        <select id="cf-modelo" name="modelo" autocomplete="off">{options}<option value="Aún no lo sé">Aún no lo sé</option></select>
+        <label for="cf-modelo">{_("Modelo de interés")}</label>
+        <select id="cf-modelo" name="modelo" autocomplete="off">{options}<option value="Aún no lo sé">{_("Aún no lo sé")}</option></select>
       </div>
       <div class="field">
-        <label for="cf-msg">Mensaje <span class="opt">(opcional)</span></label>
-        <textarea id="cf-msg" name="mensaje" rows="2" autocomplete="off" placeholder="Contanos qué te interesa…"></textarea>
+        <label for="cf-msg">{_("Mensaje")} <span class="opt">{_("(opcional)")}</span></label>
+        <textarea id="cf-msg" name="mensaje" rows="2" autocomplete="off" placeholder="{esc(_("Contanos qué te interesa…"))}"></textarea>
       </div>
-      <div class="hp" aria-hidden="true"><label for="cf-web">Sitio web</label><input id="cf-web" type="text" name="website" tabindex="-1" autocomplete="off"></div>
-      <button class="btn btn-accent btn-block" type="submit" data-label="Agendar prueba de manejo"><span>Agendar prueba de manejo</span>{ICON_ARROW}</button>
+      <div class="hp" aria-hidden="true"><label for="cf-web">Website</label><input id="cf-web" type="text" name="website" tabindex="-1" autocomplete="off"></div>
+      <button class="btn btn-accent btn-block" type="submit" data-label="{esc(_("Agendar prueba de manejo"))}"><span>{_("Agendar prueba de manejo")}</span>{ICON_ARROW}</button>
       <p class="form-status" role="status" aria-live="polite"></p>
-      <p class="form-note">Un asesor ZEEKR te contacta en el día. Al enviar aceptás que ZEEKR Paraguay procese tus datos para gestionar tu consulta.</p>
+      <p class="form-note">{_("Un asesor ZEEKR te contacta en el día. Al enviar aceptás que ZEEKR Paraguay procese tus datos para gestionar tu consulta.")}</p>
     </form>
     <div class="form-success" hidden>
       <div class="success-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <h3>¡Listo, <span data-success-name></span>!</h3>
-      <p><span data-success-what>Registramos tu solicitud.</span> <span data-success-advisor></span></p>
+      <h3>{_("¡Listo, ")}<span data-success-name></span>!</h3>
+      <p><span data-success-what>{_("Registramos tu solicitud.")}</span> <span data-success-advisor></span></p>
       <div class="success-actions">
-        <a class="btn btn-accent" href="#" target="_blank" rel="noopener" data-success-wa><span>Continuar por WhatsApp</span>{ICON_WA}</a>
-        <button class="btn btn-outline-dark" type="button" data-close-contact>Cerrar</button>
+        <a class="btn btn-accent" href="#" target="_blank" rel="noopener" data-success-wa><span>{_("Continuar por WhatsApp")}</span>{ICON_WA}</a>
+        <button class="btn btn-outline-dark" type="button" data-close-contact>{_("Cerrar")}</button>
       </div>
     </div>
   </div>
 </div>'''
 
 
-def head_block(title, desc, path, jsonld, og_img, preload="", preload_mobile=None):
+def js_i18n():
+    """Textos que usa main.js, por idioma."""
+    return {
+        "sending": _("Enviando…"),
+        "fix": _("Revisá los campos marcados para continuar."),
+        "fallback": _("No pudimos registrar la consulta en el sistema; te llevamos a WhatsApp para que un asesor te atienda igual."),
+        "waIntro": {"Consulta": _("Hola ZEEKR Paraguay, quiero hacer una consulta."), "Prueba de manejo": _("Hola ZEEKR Paraguay, quiero coordinar una prueba de manejo.")},
+        "waLabels": {"nombre": _("Nombre"), "telefono": _("Teléfono"), "modelo": _("Modelo de interés"), "mensaje": _("Mensaje")},
+        "origin": _("Origen"),
+        "advisor": _("{name} te contacta en el día."),
+        "advisorDefault": _("Un asesor te contacta en el día."),
+        "modes": {
+            "test-drive": {"eyebrow": _("Prueba de manejo"), "title": _("Agendá tu prueba de manejo"), "sub": _("Elegí el modelo y un asesor coordina con vos día, hora y lugar."), "channels": _("¿Preferís hablar ahora?"), "submit": _("Agendar prueba de manejo"), "tipo": "Prueba de manejo", "done": _("Registramos tu solicitud de prueba de manejo.")},
+            "contacto": {"eyebrow": _("Contacto"), "title": _("Contáctanos"), "sub": _("Elegí cómo preferís hablar con nosotros."), "channels": _("Llamanos o escribinos"), "submit": _("Enviar consulta"), "tipo": "Consulta", "done": _("Registramos tu consulta.")},
+        },
+        "slide": _("Diapositiva {n} de {t}: {title}"),
+        "pause": _("Pausar reproducción automática"),
+        "resume": _("Reanudar reproducción automática"),
+        "videoPause": _("Pausar video"),
+        "videoPlay": _("Reproducir video"),
+    }
+
+
+def head_block(title, desc, path, jsonld, og_img, preload="", preload_mobile=None, alts=None):
     url = DOMAIN + path
     css_v = file_hash("css/zeekr-site.css")
     ld = json.dumps(jsonld, ensure_ascii=False).replace("</", "<\\/")
@@ -568,17 +666,23 @@ def head_block(title, desc, path, jsonld, og_img, preload="", preload_mobile=Non
     if preload_mobile:
         srcset = ", ".join(f"{u} {w}w" for u, w, h in preload_mobile)
         pre += f'\n  <link rel="preload" as="image" imagesrcset="{srcset}" imagesizes="100vw" media="(max-width:767px)">'
+    alts = alts or {}
+    hreflang = "".join(f'\n  <link rel="alternate" hreflang="{LANGS[k]["hreflang"]}" href="{DOMAIN}{alts[k]}">' for k in alts)
+    if "es" in alts:
+        hreflang += f'\n  <link rel="alternate" hreflang="x-default" href="{DOMAIN}{alts["es"]}">'
+    og_alt = "".join(f'\n  <meta property="og:locale:alternate" content="{LANGS[k]["og"]}">' for k in alts if k != L)
+    i18n = json.dumps(js_i18n(), ensure_ascii=False).replace("</", "<\\/")
     return f'''  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{esc(title)}</title>
   <meta name="description" content="{esc(desc)}">
-  <link rel="canonical" href="{url}">
+  <link rel="canonical" href="{url}">{hreflang}
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
   <meta name="theme-color" content="#0A0A0A">
   <meta name="color-scheme" content="dark">
   <meta property="og:site_name" content="{SITE_NAME}">
   <meta property="og:type" content="website">
-  <meta property="og:locale" content="es_PY">
+  <meta property="og:locale" content="{LANGS[L]["og"]}">{og_alt}
   <meta property="og:url" content="{url}">
   <meta property="og:title" content="{esc(title)}">
   <meta property="og:description" content="{esc(desc)}">
@@ -597,12 +701,12 @@ def head_block(title, desc, path, jsonld, og_img, preload="", preload_mobile=Non
   <link rel="preload" href="/fonts/ZeekrHeadline-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/ZeekrText-Regular.woff2" as="font" type="font/woff2" crossorigin>{pre}
   <link rel="stylesheet" href="/css/zeekr-site.css?v={css_v}">
-  <script>document.documentElement.classList.add('js');window.__zkGA=function(){{if(window.__zkGAOn)return;window.__zkGAOn=1;window.dataLayer=window.dataLayer||[];window.gtag=function(){{dataLayer.push(arguments)}};gtag('js',new Date());gtag('config','{GA_ID}',{{anonymize_ip:true}});var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id={GA_ID}';document.head.appendChild(s)}};try{{var c=JSON.parse(localStorage.getItem('zeekr-consent')||'null');if(c&&c.analytics)window.__zkGA()}}catch(e){{}}</script>
+  <script>document.documentElement.classList.add('js');window.ZK_I18N={i18n};window.__zkGA=function(){{if(window.__zkGAOn)return;window.__zkGAOn=1;window.dataLayer=window.dataLayer||[];window.gtag=function(){{dataLayer.push(arguments)}};gtag('js',new Date());gtag('config','{GA_ID}',{{anonymize_ip:true}});var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id={GA_ID}';document.head.appendChild(s)}};try{{var c=JSON.parse(localStorage.getItem('zeekr-consent')||'null');if(c&&c.analytics)window.__zkGA()}}catch(e){{}}</script>
   <script type="application/ld+json">{ld}</script>'''
 
 
-def render_page(path, title, desc, content, nav_active, jsonld, og_img, preload="", body_cls="", lastmod=None, preload_mobile=None):
-    """path: '/', '/modelos/zeekr-7x/', '/404.html'."""
+def render_page(path, title, desc, content, nav_active, jsonld, og_img, preload="", body_cls="", lastmod=None, preload_mobile=None, alts=None):
+    """path: '/', '/en/models/zeekr-7x/', '/404.html', '/en/404.html'."""
     if path.endswith("/"):
         out = os.path.join(path.strip("/"), "index.html") if path != "/" else "index.html"
     else:
@@ -610,12 +714,12 @@ def render_page(path, title, desc, content, nav_active, jsonld, og_img, preload=
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     js_v = file_hash("js/main.js")
     html = f'''<!DOCTYPE html>
-<html lang="es-PY">
+<html lang="{LANGS[L]["html"]}">
 <head>
-{head_block(title, desc, path, jsonld, og_img, preload, preload_mobile)}
+{head_block(title, desc, path, jsonld, og_img, preload, preload_mobile, alts)}
 </head>
-<body class="{body_cls}">
-{header(nav_active)}
+<body class="{body_cls} lang-{L}">
+{header(nav_active, alts)}
 <main id="main" tabindex="-1">
 {content}
 </main>
@@ -627,27 +731,31 @@ def render_page(path, title, desc, content, nav_active, jsonld, og_img, preload=
     with open(out, "w") as fh:
         fh.write(html)
     if not path.endswith("404.html"):
-        PAGES.append((path, lastmod or TODAY))
+        PAGES.append((path, lastmod or TODAY, alts or {}))
     print("OK", out)
 
 
-ORG = {
-    "@type": ["AutoDealer", "Organization"], "@id": DOMAIN + "/#org",
-    "name": SITE_NAME, "alternateName": "Zeekr Paraguay", "url": DOMAIN + "/",
-    "logo": {"@type": "ImageObject", "url": DOMAIN + "/icons/icon-512.png", "width": 512, "height": 512},
-    "image": DOMAIN + "/images/_opt/og/home.jpg",
-    "description": "Distribuidor oficial de ZEEKR en Paraguay: vehículos eléctricos premium ZEEKR 001, ZEEKR X y ZEEKR 7X.",
-    "brand": {"@type": "Brand", "name": "ZEEKR"},
-    "parentOrganization": {"@type": "Organization", "name": "Santa Rosa Paraguay"},
-    "areaServed": {"@type": "Country", "name": "Paraguay"},
-    "telephone": "+595971370006",
-    "contactPoint": [
-        {"@type": "ContactPoint", "telephone": "+595-971-370-006", "contactType": "sales", "areaServed": "PY", "availableLanguage": ["es"]},
-        {"@type": "ContactPoint", "telephone": "+595-974-772-247", "contactType": "customer service", "areaServed": "PY", "availableLanguage": ["es"]},
-    ],
-    "sameAs": ["https://www.instagram.com/zeekrparaguay/", "https://www.zeekrlife.com/"],
-}
-WEBSITE = {"@type": "WebSite", "@id": DOMAIN + "/#website", "name": SITE_NAME, "url": DOMAIN + "/", "inLanguage": "es-PY", "publisher": {"@id": DOMAIN + "/#org"}}
+def org():
+    return {
+        "@type": ["AutoDealer", "Organization"], "@id": DOMAIN + "/#org",
+        "name": SITE_NAME, "alternateName": "Zeekr Paraguay", "url": DOMAIN + "/",
+        "logo": {"@type": "ImageObject", "url": DOMAIN + "/icons/icon-512.png", "width": 512, "height": 512},
+        "image": DOMAIN + "/images/_opt/og/home.jpg",
+        "description": _("Distribuidor oficial de ZEEKR en Paraguay: vehículos eléctricos premium ZEEKR 001, ZEEKR X y ZEEKR 7X."),
+        "brand": {"@type": "Brand", "name": "ZEEKR"},
+        "parentOrganization": {"@type": "Organization", "name": "Santa Rosa Paraguay"},
+        "areaServed": {"@type": "Country", "name": "Paraguay"},
+        "telephone": "+595971370006",
+        "contactPoint": [
+            {"@type": "ContactPoint", "telephone": "+595-971-370-006", "contactType": "sales", "areaServed": "PY", "availableLanguage": ["es", "en", "pt", "zh"]},
+            {"@type": "ContactPoint", "telephone": "+595-974-772-247", "contactType": "customer service", "areaServed": "PY", "availableLanguage": ["es"]},
+        ],
+        "sameAs": ["https://www.instagram.com/zeekrparaguay/", "https://www.zeekrlife.com/"],
+    }
+
+
+def website():
+    return {"@type": "WebSite", "@id": DOMAIN + "/#website", "name": SITE_NAME, "url": DOMAIN + "/", "inLanguage": LANGS[L]["html"], "publisher": {"@id": DOMAIN + "/#org"}}
 
 
 def breadcrumb(items):
@@ -657,30 +765,30 @@ def breadcrumb(items):
 
 def faq_schema(qa):
     return {"@type": "FAQPage", "mainEntity": [
-        {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in qa]}
+        {"@type": "Question", "name": _(q), "acceptedAnswer": {"@type": "Answer", "text": _(a)}} for q, a in qa]}
 
 
 def graph(*items):
-    return {"@context": "https://schema.org", "@graph": [WEBSITE, ORG, *items]}
+    return {"@context": "https://schema.org", "@graph": [website(), org(), *items]}
 
 
 # ------------------------------------------------------------------ bloques
 def eyebrow(text, dark=False):
-    return f'<p class="eyebrow{" eyebrow-dark" if dark else ""}">{text}</p>'
+    return f'<p class="eyebrow{" eyebrow-dark" if dark else ""}">{_(text)}</p>'
 
 
 def stat_items(stats):
-    return "".join(f'<div class="ind"><span class="ind-value">{v}</span><span class="ind-label">{l}</span></div>' for v, l in stats)
+    return "".join(f'<div class="ind"><span class="ind-value">{_(v)}</span><span class="ind-label">{_(l)}</span></div>' for v, l in stats)
 
 
 def faq_block(qa, title="Preguntas frecuentes", kicker="Te ayudamos"):
     items = "".join(
-        f'<details class="faq-item"><summary><span>{q}</span><span class="faq-icon" aria-hidden="true"></span></summary><div class="faq-body"><p>{a}</p></div></details>'
+        f'<details class="faq-item"><summary><span>{_(q)}</span><span class="faq-icon" aria-hidden="true"></span></summary><div class="faq-body"><p>{_(a)}</p></div></details>'
         for q, a in qa)
     return f'''
 <section class="section faq-section" aria-labelledby="faqTitle">
   <div class="faq-grid">
-    <div class="faq-head reveal">{eyebrow(kicker)}<h2 id="faqTitle">{title}</h2></div>
+    <div class="faq-head reveal">{eyebrow(kicker)}<h2 id="faqTitle">{_(title)}</h2></div>
     <div class="faq-list reveal">{items}</div>
   </div>
 </section>'''
@@ -693,12 +801,12 @@ def contact_strip(model_name=None):
   <div class="contact-inner reveal">
     <div class="contact-copy">
       {eyebrow("Estamos para ayudarte")}
-      <h2 id="contactTitle">¿Listo para manejar un ZEEKR?</h2>
-      <p>Coordiná tu prueba de manejo con un asesor. Ventas: <a href="tel:+595971370006">0971&nbsp;370&nbsp;006</a> · <a href="tel:+595976979155">0976&nbsp;979&nbsp;155</a> · <a href="tel:+595976203280">0976&nbsp;203&nbsp;280</a> · Postventa: <a href="tel:+595974772247">0974&nbsp;772&nbsp;247</a></p>
+      <h2 id="contactTitle">{_("¿Listo para manejar un ZEEKR?")}</h2>
+      <p>{_("Coordiná tu prueba de manejo con un asesor.")} {_("Ventas")}: <a href="tel:+595971370006">0971&nbsp;370&nbsp;006</a> · <a href="tel:+595976979155">0976&nbsp;979&nbsp;155</a> · <a href="tel:+595976203280">0976&nbsp;203&nbsp;280</a> · {_("Postventa")}: <a href="tel:+595974772247">0974&nbsp;772&nbsp;247</a></p>
     </div>
     <div class="contact-actions">
-      {btn("Agendá tu prueba de manejo", kind="accent", attrs=' data-open-contact data-intent="test-drive"' + attr)}
-      {btn("Escribinos por WhatsApp", href=f"https://wa.me/{WA_NUMBER}", kind="outline", icon=ICON_WA, attrs=' target="_blank" rel="noopener"')}
+      {btn(_("Agendá tu prueba de manejo"), kind="accent", attrs=' data-open-contact data-intent="test-drive"' + attr)}
+      {btn(_("Escribinos por WhatsApp"), href=f"https://wa.me/{WA_NUMBER}", kind="outline", icon=ICON_WA, attrs=' target="_blank" rel="noopener"')}
     </div>
   </div>
 </section>'''
@@ -709,8 +817,8 @@ def page_intro(kicker, title, lead=None, tag="h1"):
 <section class="page-intro">
   <div class="page-intro-inner reveal">
     {eyebrow(kicker)}
-    <{tag}>{title}</{tag}>
-    {f"<p class='lead'>{lead}</p>" if lead else ""}
+    <{tag}>{_(title)}</{tag}>
+    {f"<p class='lead'>{_(lead)}</p>" if lead else ""}
   </div>
 </section>'''
 
@@ -722,34 +830,34 @@ def hero_slider():
     for i, key in enumerate(MODEL_ORDER):
         m = MODELS[key]
         first = i == 0
-        pic = picture(m["hero_desktop"], f"{m['name']} — {m['claim']}", (1200, 1800, 2400), sizes="100vw",
+        pic = picture(m["hero_desktop"], f"{m['name']} — {_(m['claim'])}", (1200, 1800, 2400), sizes="100vw",
                       cls="slide-media", img_cls="slide-image", loading="eager" if first else "lazy",
                       fetchpriority="high" if first else None, mobile=m["hero_mobile"],
                       decoding="sync" if first else "async")
         slides.append(f'''
-    <div class="slide{' is-active' if first else ''}" role="group" aria-roledescription="diapositiva" aria-label="{i + 1} de {n}" data-slide{'' if first else ' aria-hidden="true"'}>
+    <div class="slide{' is-active' if first else ''}" role="group" aria-roledescription="{esc(_("diapositiva"))}" aria-label="{i + 1} / {n}" data-slide{'' if first else ' aria-hidden="true"'}>
       {pic}
       <div class="slide-shade" aria-hidden="true"></div>
       <div class="slide-content">
-        <p class="eyebrow">{m['eyebrow']}</p>
+        <p class="eyebrow">{_(m['eyebrow'])}</p>
         <h2 class="slide-title">{m['name']}</h2>
-        <p class="slide-claim">{m['claim']}</p>
+        <p class="slide-claim">{_(m['claim'])}</p>
         <div class="slide-actions">
-          {btn(f"Conocé el {m['name']}", href=model_url(key), kind="accent")}
-          {btn("Agendá tu prueba de manejo", kind="cream", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}
+          {btn(_("Conocé el {model}").replace("{model}", m['name']), href=url_model(key), kind="accent")}
+          {btn(_("Agendá tu prueba de manejo"), kind="cream", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}
         </div>
       </div>
     </div>''')
-        dots.append(f'<button class="pager-bar{" is-active" if first else ""}" type="button" data-goto="{i}" aria-label="Ir a la diapositiva {i + 1}: {m["name"]}"{" aria-current=\"true\"" if first else ""}></button>')
+        dots.append(f'<button class="pager-bar{" is-active" if first else ""}" type="button" data-goto="{i}" aria-label="{esc(_("Ir a la diapositiva {n}: {model}").replace("{n}", str(i + 1)).replace("{model}", m["name"]))}"{" aria-current=\"true\"" if first else ""}></button>')
     return f'''
-<section class="hero" id="hero" aria-roledescription="carrusel" aria-label="Modelos destacados">
+<section class="hero" id="hero" aria-roledescription="{esc(_("carrusel"))}" aria-label="{esc(_("Modelos destacados"))}">
   <div class="hero-track" aria-live="off">{''.join(slides)}
   </div>
   <div class="hero-ui">
     <p class="hero-counter" aria-hidden="true"><span data-counter>01</span><span class="hero-counter-sep">/</span>{n:02d}</p>
-    <div class="hero-pager" role="group" aria-label="Diapositivas">{''.join(dots)}</div>
+    <div class="hero-pager" role="group" aria-label="{esc(_("Diapositivas"))}">{''.join(dots)}</div>
     <div class="hero-controls">
-      <button class="hero-ctl hero-ctl-a11y" type="button" data-toggle-play aria-label="Pausar reproducción automática" aria-pressed="false"><span class="ico-pause">{ICON_PAUSE}</span><span class="ico-play">{ICON_PLAY}</span></button>
+      <button class="hero-ctl hero-ctl-a11y" type="button" data-toggle-play aria-label="{esc(_("Pausar reproducción automática"))}" aria-pressed="false"><span class="ico-pause">{ICON_PAUSE}</span><span class="ico-play">{ICON_PLAY}</span></button>
     </div>
   </div>
   <p class="sr-only" role="status" aria-live="polite" data-slide-status></p>
@@ -761,16 +869,16 @@ def brand_statement():
 <section class="statement" aria-labelledby="stTitle">
   <div class="statement-inner reveal">
     {eyebrow("ZEEKR Paraguay")}
-    <h1 id="stTitle">Vehículos eléctricos premium que reimaginan la forma de moverse.</h1>
-    <p>Diseño escandinavo, tecnología de vanguardia y el respaldo del Grupo Geely. ZEEKR llega a Paraguay de la mano de Santa Rosa Paraguay, con los modelos 001, X y 7X.</p>
-    <a class="text-link" href="/nosotros/">Conocé la marca {ICON_ARROW}</a>
+    <h1 id="stTitle">{_("Vehículos eléctricos premium que reimaginan la forma de moverse.")}</h1>
+    <p>{_("Diseño escandinavo, tecnología de vanguardia y el respaldo del Grupo Geely. ZEEKR llega a Paraguay de la mano de Santa Rosa Paraguay, con los modelos 001, X y 7X.")}</p>
+    <a class="text-link" href="{url_section('nosotros')}">{_("Conocé la marca")} {ICON_ARROW}</a>
   </div>
 </section>'''
 
 
 def model_card(key, heading="h2"):
     m = MODELS[key]
-    pic = picture(m["card"], f"{m['name']}, {m['tagline'].lower()}", (960, 1600, 2200), sizes="100vw",
+    pic = picture(m["card"], f"{m['name']}, {_(m['tagline'])}", (960, 1600, 2200), sizes="100vw",
                   cls="model-media", img_cls="model-image", attrs=f' style="--pos:{m["card_pos"]};--pos-m:{m.get("card_pos_m", m["card_pos"])}"')
     return f'''
 <article class="model-card" id="modelo-{m['slug']}">
@@ -779,14 +887,14 @@ def model_card(key, heading="h2"):
   <div class="model-content">
     <div class="model-head reveal">
       {eyebrow(m['eyebrow'])}
-      <{heading} class="model-title"><a href="{model_url(key)}">{m['name']}</a></{heading}>
-      <p class="model-claim">{m['claim']}</p>
+      <{heading} class="model-title"><a href="{url_model(key)}">{m['name']}</a></{heading}>
+      <p class="model-claim">{_(m['claim'])}</p>
     </div>
     <div class="model-foot reveal">
       <div class="model-stats">{stat_items(m['stats'])}</div>
       <div class="model-actions">
-        {btn(f"Descubrí el {m['name']}", href=model_url(key), kind="cream", icon=ICON_ARROW, extra="btn-arrow")}
-        {btn("Agendá tu prueba de manejo", kind="outline", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}
+        {btn(_("Descubrí el {model}").replace("{model}", m['name']), href=url_model(key), kind="cream", icon=ICON_ARROW, extra="btn-arrow")}
+        {btn(_("Agendá tu prueba de manejo"), kind="outline", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}
       </div>
     </div>
   </div>
@@ -800,64 +908,65 @@ def tech_strip():
         ("Diseño desde Gotemburgo", "Centro global de diseño en Suecia, dirigido por Stefan Sielaff."),
         ("Seguridad integral", "Estructuras reforzadas y asistencias avanzadas a la conducción en toda la gama."),
     ]
-    lis = "".join(f'<li class="tech-item reveal"><h3>{h}</h3><p>{p}</p></li>' for h, p in items)
+    lis = "".join(f'<li class="tech-item reveal"><h3>{_(h)}</h3><p>{_(p)}</p></li>' for h, p in items)
     return f'''
 <section class="section tech" aria-labelledby="techTitle">
-  <div class="section-head reveal">{eyebrow("Tecnología")}<h2 id="techTitle">Ingeniería que se siente en cada viaje</h2></div>
+  <div class="section-head reveal">{eyebrow("Tecnología")}<h2 id="techTitle">{_("Ingeniería que se siente en cada viaje")}</h2></div>
   <ul class="tech-grid">{lis}</ul>
 </section>'''
 
 
 def news_card(n, heading="h3"):
-    url = news_url(n)
-    pic = picture(n["img"], n["title"], (480, 800, 1200), sizes="(min-width:992px) 33vw, (min-width:600px) 50vw, 100vw", cls="news-media")
+    url = url_news(n)
+    pic = picture(n["img"], _(n["title"]), (480, 800, 1200), sizes="(min-width:992px) 33vw, (min-width:600px) 50vw, 100vw", cls="news-media")
     date = f'<time class="news-date" datetime="{n["date"]}">{fecha_larga(n["date"])}</time>'
-    kicker = f'<span class="news-kicker">{n.get("kicker", "")}</span>' if n.get("kicker") else ""
-    title = f'<{heading} class="news-title">{n["title"]}</{heading}>'
+    kicker = f'<span class="news-kicker">{_(n.get("kicker", ""))}</span>' if n.get("kicker") else ""
+    title = f'<{heading} class="news-title">{_(n["title"])}</{heading}>'
     if url:
-        return f'<article class="news-item reveal"><a class="news-link" href="{url}">{pic}<div class="news-body"><p class="news-meta">{kicker}{date}</p>{title}<span class="text-link">Leer la nota {ICON_ARROW}</span></div></a></article>'
+        return f'<article class="news-item reveal"><a class="news-link" href="{url}">{pic}<div class="news-body"><p class="news-meta">{kicker}{date}</p>{title}<span class="text-link">{_("Leer la nota")} {ICON_ARROW}</span></div></a></article>'
     return f'<article class="news-item reveal">{pic}<div class="news-body"><p class="news-meta">{kicker}{date}</p>{title}</div></article>'
 
 
 def build_index():
+    alts = alternates(url_home)
     news = "".join(news_card(n) for n in NEWS[:3])
     models = "".join(model_card(k) for k in MODEL_ORDER)
     content = hero_slider() + brand_statement() + f'''
-<section class="models" aria-label="Modelos ZEEKR">{models}
+<section class="models" aria-label="{esc(_("Modelos ZEEKR"))}">{models}
 </section>''' + tech_strip() + f'''
 <section class="news" aria-labelledby="newsTitle">
-  <div class="section-head reveal">{eyebrow("Novedades", dark=True)}<h2 id="newsTitle">Últimas noticias</h2></div>
+  <div class="section-head reveal">{eyebrow("Novedades", dark=True)}<h2 id="newsTitle">{_("Últimas noticias")}</h2></div>
   <div class="news-grid">{news}</div>
-  <div class="section-more reveal">{btn("Ver todas las noticias", href="/noticias/", kind="outline-dark")}</div>
+  <div class="section-more reveal">{btn(_("Ver todas las noticias"), href=url_section('noticias'), kind="outline-dark")}</div>
 </section>''' + faq_block(HOME_FAQ) + contact_strip()
     og = og_image(MODELS["7x"]["hero_desktop"], "home")
     jsonld = graph(
-        {"@type": "ItemList", "name": "Modelos ZEEKR Paraguay", "itemListElement": [
-            {"@type": "ListItem", "position": i + 1, "name": MODELS[k]["name"], "url": DOMAIN + model_url(k)} for i, k in enumerate(MODEL_ORDER)]},
+        {"@type": "ItemList", "name": _("Modelos ZEEKR Paraguay"), "itemListElement": [
+            {"@type": "ListItem", "position": i + 1, "name": MODELS[k]["name"], "url": DOMAIN + url_model(k)} for i, k in enumerate(MODEL_ORDER)]},
         faq_schema(HOME_FAQ),
     )
-    render_page("/", "ZEEKR Paraguay | Vehículos eléctricos premium: 7X, X y 001",
-                "Descubrí los vehículos eléctricos premium ZEEKR en Paraguay: ZEEKR 7X, ZEEKR X y ZEEKR 001. Diseño escandinavo, tecnología líder y autonomía real. Agendá tu prueba de manejo.",
+    render_page(url_home(), _("ZEEKR Paraguay | Vehículos eléctricos premium: 7X, X y 001"),
+                _("Descubrí los vehículos eléctricos premium ZEEKR en Paraguay: ZEEKR 7X, ZEEKR X y ZEEKR 001. Diseño escandinavo, tecnología líder y autonomía real. Agendá tu prueba de manejo."),
                 content, "", jsonld, og, preload=_derivative(MODELS["7x"]["hero_desktop"], 1800, "webp", False)[0], body_cls="page-home has-hero",
-                preload_mobile=[_derivative(MODELS["7x"]["hero_mobile"], w, "webp", False) for w in (480, 780)])
+                preload_mobile=[_derivative(MODELS["7x"]["hero_mobile"], w, "webp", False) for w in (480, 780)], alts=alts)
 
 
 # ------------------------------------------------------------------ modelos
 def model_hero(m, image=None, mobile=None, cta=True, h1=None, kicker=None):
     img = image or m["card"]
-    pic = picture(img, f"{m['name']} — {m['tagline']}", (1200, 1800, 2400), sizes="100vw", cls="hero-media",
+    pic = picture(img, f"{m['name']} — {_(m['tagline'])}", (1200, 1800, 2400), sizes="100vw", cls="hero-media",
                   img_cls="hero-bg", loading="eager", fetchpriority="high", mobile=mobile, decoding="sync",
                   attrs=f' style="--pos:{m.get("hero_pos", "50% 50%")}"')
     stats = f'<div class="stats-row">{stat_items(m["stats"])}</div>' if m.get("stats") else ""
-    actions = f'''<div class="hero-actions">{btn("Agendá tu prueba de manejo", kind="accent", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}{btn("Ficha técnica (PDF)", href="/" + m["pdf"], kind="outline", icon=ICON_DOWNLOAD, attrs=' target="_blank" rel="noopener"') if m.get("pdf") else ""}</div>''' if cta else ""
+    actions = f'''<div class="hero-actions">{btn(_("Agendá tu prueba de manejo"), kind="accent", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}{btn(_("Ficha técnica (PDF)"), href="/" + m["pdf"], kind="outline", icon=ICON_DOWNLOAD, attrs=' target="_blank" rel="noopener"') if m.get("pdf") else ""}</div>''' if cta else ""
     return f'''
 <section class="hero-model">
   {pic}
   <div class="hero-shade" aria-hidden="true"></div>
   <div class="hero-inner">
     {eyebrow(kicker or m["eyebrow"])}
-    <h1>{h1 or m['name']}</h1>
-    <p class="claim">{m['claim']}</p>
+    <h1>{_(h1) if h1 else m['name']}</h1>
+    <p class="claim">{_(m['claim'])}</p>
     {actions}
     {stats}
   </div>
@@ -865,52 +974,52 @@ def model_hero(m, image=None, mobile=None, cta=True, h1=None, kicker=None):
 
 
 def spec_table(rows, caption):
-    trs = "".join(f'<tr><th scope="row">{k}</th><td>{v}</td></tr>' for k, v in rows)
-    return f'<table class="spec"><caption class="sr-only">{caption}</caption><tbody>{trs}</tbody></table>'
+    trs = "".join(f'<tr><th scope="row">{_(k)}</th><td>{_(v)}</td></tr>' for k, v in rows)
+    return f'<table class="spec"><caption class="sr-only">{_(caption)}</caption><tbody>{trs}</tbody></table>'
 
 
 def sec_split(kicker, title, text, image, alt, reverse=False, dark=False):
-    pic = picture(image, alt, (640, 960, 1400), sizes="(min-width:992px) 50vw, 100vw", cls="visual")
-    body = f'<div class="split-copy reveal">{eyebrow(kicker)}<h2>{title}</h2><p>{text}</p></div>'
+    pic = picture(image, _(alt), (640, 960, 1400), sizes="(min-width:992px) 50vw, 100vw", cls="visual")
+    body = f'<div class="split-copy reveal">{eyebrow(kicker)}<h2>{_(title)}</h2><p>{_(text)}</p></div>'
     return f'<section class="section{" dark" if dark else ""}"><div class="split{" reverse" if reverse else ""}">{pic}{body}</div></section>'
 
 
 def sec_features(kicker, title, items, intro=None, dark=False, cols=3):
-    lis = "".join(f'<li class="feature reveal"><h3>{h}</h3><p>{p}</p></li>' for h, p in items)
-    return f'''<section class="section{" dark" if dark else ""}"><div class="section-head reveal">{eyebrow(kicker)}<h2>{title}</h2>{f"<p class='lead'>{intro}</p>" if intro else ""}</div><ul class="feature-list cols-{cols}">{lis}</ul></section>'''
+    lis = "".join(f'<li class="feature reveal"><h3>{_(h)}</h3><p>{_(p)}</p></li>' for h, p in items)
+    return f'''<section class="section{" dark" if dark else ""}"><div class="section-head reveal">{eyebrow(kicker)}<h2>{_(title)}</h2>{f"<p class='lead'>{_(intro)}</p>" if intro else ""}</div><ul class="feature-list cols-{cols}">{lis}</ul></section>'''
 
 
 def sec_stats(kicker, title, stats, dark=False):
-    return f'''<section class="section{" dark" if dark else ""}"><div class="section-head reveal">{eyebrow(kicker)}<h2>{title}</h2></div><div class="stat-grid reveal">{stat_items(stats)}</div></section>'''
+    return f'''<section class="section{" dark" if dark else ""}"><div class="section-head reveal">{eyebrow(kicker)}<h2>{_(title)}</h2></div><div class="stat-grid reveal">{stat_items(stats)}</div></section>'''
 
 
 def sec_band(image, alt, kicker, title, text=None, pos="50% 50%"):
-    pic = picture(image, alt, (960, 1600, 2400), sizes="100vw", cls="band-media", attrs=f' style="object-position:{pos}"')
-    return f'''<section class="band">{pic}<div class="band-shade" aria-hidden="true"></div><div class="band-content reveal">{eyebrow(kicker)}<h2>{title}</h2>{f"<p>{text}</p>" if text else ""}</div></section>'''
+    pic = picture(image, _(alt), (960, 1600, 2400), sizes="100vw", cls="band-media", attrs=f' style="object-position:{pos}"')
+    return f'''<section class="band">{pic}<div class="band-shade" aria-hidden="true"></div><div class="band-content reveal">{eyebrow(kicker)}<h2>{_(title)}</h2>{f"<p>{_(text)}</p>" if text else ""}</div></section>'''
 
 
 def sec_gallery(kicker, title, images):
     figs = "".join(
-        f'<li class="gallery-item">{picture(src, alt, (480, 800, 1200), sizes="(min-width:992px) 30vw, 78vw")}<figcaption>{alt}</figcaption></li>'
+        f'<li class="gallery-item">{picture(src, _(alt), (480, 800, 1200), sizes="(min-width:992px) 30vw, 78vw")}<figcaption>{_(alt)}</figcaption></li>'
         for src, alt in images)
-    return f'''<section class="section gallery-section" aria-label="{title}"><div class="section-head reveal">{eyebrow(kicker)}<h2>{title}</h2></div><ul class="gallery reveal" data-gallery tabindex="0" aria-label="Galería: deslizá para ver más">{figs}</ul></section>'''
+    return f'''<section class="section gallery-section" aria-label="{esc(_(title))}"><div class="section-head reveal">{eyebrow(kicker)}<h2>{_(title)}</h2></div><ul class="gallery reveal" data-gallery tabindex="0" aria-label="{esc(_("Galería: deslizá para ver más"))}">{figs}</ul></section>'''
 
 
 def sec_compare(kicker, title, cols, intro=None):
-    parts = "".join(f'<div class="spec-col reveal"><h3>{name}</h3>{f"<p class=spec-sub>{sub}</p>" if sub else ""}{spec_table(rows, f"Ficha técnica {name}")}</div>' for name, sub, rows in cols)
-    return f'''<section class="section"><div class="section-head reveal">{eyebrow(kicker)}<h2>{title}</h2>{f"<p class='lead'>{intro}</p>" if intro else ""}</div><div class="spec-cols">{parts}</div></section>'''
+    parts = "".join(f'<div class="spec-col reveal"><h3>{_(name)}</h3>{f"<p class=spec-sub>{_(sub)}</p>" if sub else ""}{spec_table(rows, "Ficha técnica " + name)}</div>' for name, sub, rows in cols)
+    return f'''<section class="section"><div class="section-head reveal">{eyebrow(kicker)}<h2>{_(title)}</h2>{f"<p class='lead'>{_(intro)}</p>" if intro else ""}</div><div class="spec-cols">{parts}</div></section>'''
 
 
 def sec_video(src, poster, kicker, title, text):
     pic = _derivative(poster, 1600, "jpeg", False)
     return f'''
 <section class="video-section">
-  <video class="video-bg" muted loop playsinline preload="metadata" poster="{pic[0]}" aria-label="{title}" data-video>
+  <video class="video-bg" muted loop playsinline preload="metadata" poster="{pic[0]}" aria-label="{esc(_(title))}" data-video>
     <source src="/{src}" type="video/mp4">
   </video>
   <div class="band-shade" aria-hidden="true"></div>
-  <div class="band-content reveal">{eyebrow(kicker)}<h2>{title}</h2><p>{text}</p></div>
-  <button class="hero-ctl video-toggle" type="button" data-video-toggle aria-label="Pausar video" aria-pressed="false"><span class="ico-pause">{ICON_PAUSE}</span><span class="ico-play">{ICON_PLAY}</span></button>
+  <div class="band-content reveal">{eyebrow(kicker)}<h2>{_(title)}</h2><p>{_(text)}</p></div>
+  <button class="hero-ctl video-toggle" type="button" data-video-toggle aria-label="{esc(_("Pausar video"))}" aria-pressed="false"><span class="ico-pause">{ICON_PAUSE}</span><span class="ico-play">{ICON_PLAY}</span></button>
 </section>'''
 
 
@@ -918,19 +1027,19 @@ def model_jsonld(key, url):
     m = MODELS[key]
     car = {"@type": ["Product", "Car"], "name": m["name"], "brand": {"@type": "Brand", "name": "ZEEKR"},
            "manufacturer": {"@type": "Organization", "name": "ZEEKR"},
-           "model": m["short"], "vehicleConfiguration": m["tagline"], "fuelType": "Electric",
-           "description": m["schema_desc"], "url": DOMAIN + url,
-           "image": [DOMAIN + _derivative(m["card"], 1600, "jpeg", False)[0], DOMAIN + _derivative(m["hero_desktop"], 1800, "jpeg", False)[0]],
-           "offers": {"@type": "Offer", "availability": "https://schema.org/InStock", "url": DOMAIN + url,
-                      "seller": {"@id": DOMAIN + "/#org"}, "priceCurrency": "PYG", "price": "0", "priceSpecification": {"@type": "PriceSpecification", "priceCurrency": "PYG", "description": "Consultar precio con un asesor"}}}
-    # sin precio público: mejor no declarar Offer con price ficticio
-    car.pop("offers")
-    return graph(car, breadcrumb([("Inicio", "/"), ("Modelos", "/modelos/"), (m["name"], url)]), faq_schema(m["faq"]))
+           "model": m["short"], "vehicleConfiguration": _(m["tagline"]), "fuelType": "Electric",
+           "description": _(m["schema_desc"]), "url": DOMAIN + url,
+           "image": [DOMAIN + _derivative(m["card"], 1600, "jpeg", False)[0], DOMAIN + _derivative(m["hero_desktop"], 1800, "jpeg", False)[0]]}
+    return graph(car, breadcrumb([(_("Inicio"), url_home()), (_("Modelos"), url_section("modelos")), (m["name"], url)]), faq_schema(m["faq"]))
+
+
+def model_meta(m):
+    return _(m["meta_title"]), _(m["meta_desc"])
 
 
 def page_7x():
     m = MODELS["7x"]
-    url = model_url("7x")
+    url = url_model("7x")
     content = model_hero(m, image="images/hero/7x-desktop.jpg", mobile="images/hero/7x-mobile.jpg") + \
         sec_features("Explorá lo que hace único al ZEEKR 7X", "Conocé el SUV de próxima generación", [
             ("Diseño futurista", "Líneas limpias, proporciones elegantes y una presencia que destaca en la ciudad."),
@@ -975,14 +1084,16 @@ def page_7x():
             ("Garantía", None, [("Vehículo", "5 años o 100.000 km, lo que ocurra primero"), ("Batería", "8 años o 160.000 km, lo que ocurra primero")]),
         ]) + faq_block(m["faq"], title="Preguntas frecuentes sobre el ZEEKR 7X") + contact_strip(m["name"])
     og = og_image(m["card"], "zeekr-7x", pos=(0.6, 0.5))
-    render_page(url, m["meta_title"], m["meta_desc"], content, "modelos", model_jsonld("7x", url), og,
+    title, desc = model_meta(m)
+    render_page(url, title, desc, content, "modelos", model_jsonld("7x", url), og,
                 preload=_derivative("images/hero/7x-desktop.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero",
-                preload_mobile=[_derivative("images/hero/7x-mobile.jpg", w, "webp", False) for w in (480, 780)])
+                preload_mobile=[_derivative("images/hero/7x-mobile.jpg", w, "webp", False) for w in (480, 780)],
+                alts=alternates(lambda lang: url_model("7x", lang)))
 
 
 def page_x():
     m = MODELS["x"]
-    url = model_url("x")
+    url = url_model("x")
     content = model_hero(m, image="images/zeekrx/exterior-mist-grey.jpg") + \
         sec_split("El SUV urbano que potencia tu estilo de vida", "Llevando el SUV urbano al siguiente nivel", "El ZEEKR X es un SUV compacto de lujo creado para los estilos de vida urbanos de hoy: el compañero perfecto para aventureros y familias. Líneas atrevidas, tecnología inteligente y máxima comodidad en un solo vehículo.", "images/zeekrx/prestacion1.png", "ZEEKR X circulando por la ciudad") + \
         sec_stats("Prestaciones", "0–100 km/h en 3,8 s (AWD)", [("428 HP", "Potencia máxima (AWD)"), ("190 km/h", "Velocidad máxima"), ("440 km", "Autonomía WLTP (RWD)"), ("69 kWh", "Batería")], dark=True) + \
@@ -1013,13 +1124,15 @@ def page_x():
             ("Dimensiones", None, [("Longitud", "4.432 mm"), ("Ancho", "1.836 mm"), ("Altura", "1.566 mm"), ("Distancia entre ejes", "2.750 mm")]),
         ]) + faq_block(m["faq"], title="Preguntas frecuentes sobre el ZEEKR X") + contact_strip(m["name"])
     og = og_image(m["card"], "zeekr-x")
-    render_page(url, m["meta_title"], m["meta_desc"], content, "modelos", model_jsonld("x", url), og,
-                preload=_derivative("images/zeekrx/exterior-mist-grey.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero")
+    title, desc = model_meta(m)
+    render_page(url, title, desc, content, "modelos", model_jsonld("x", url), og,
+                preload=_derivative("images/zeekrx/exterior-mist-grey.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero",
+                alts=alternates(lambda lang: url_model("x", lang)))
 
 
 def page_001():
     m = MODELS["001"]
-    url = model_url("001")
+    url = url_model("001")
     content = model_hero(m, image="images/zeekr001/exterior-phantom-black.jpg") + \
         sec_split("El crossover de lujo, reinventado", "El primer deportivo familiar eléctrico puro producido en masa del mundo", "El ZEEKR 001 ofrece algo nuevo para todos. La combinación de elegancia y confort brinda un viaje lujoso para las aventuras de toda la familia.", "images/zeekr001/prestacion1.png", "ZEEKR 001 en ruta de montaña") + \
         sec_split("Arquitectura SEA", "Tecnología que lleva los vehículos eléctricos más lejos", "Cada ZEEKR se basa en la Arquitectura de Experiencia Sostenible (SEA): una plataforma totalmente eléctrica, modular y escalable que integra las últimas tecnologías. Autonomía de hasta 620 km y carga del 10 % al 80 % en menos de 30 minutos con carga DC de 200 kW.", "images/zeekr001/chasis1.jpg", "Chasis y arquitectura SEA del ZEEKR 001", reverse=True, dark=True) + \
@@ -1051,128 +1164,138 @@ def page_001():
             ("Dimensiones", None, [("Longitud", "4.955 mm"), ("Ancho", "2.005 mm"), ("Altura", "1.560 mm"), ("Distancia entre ejes", "2.999 mm")]),
         ]) + faq_block(m["faq"], title="Preguntas frecuentes sobre el ZEEKR 001") + contact_strip(m["name"])
     og = og_image(m["card"], "zeekr-001", pos=(0.6, 0.5))
-    render_page(url, m["meta_title"], m["meta_desc"], content, "modelos", model_jsonld("001", url), og,
-                preload=_derivative("images/zeekr001/exterior-phantom-black.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero")
+    title, desc = model_meta(m)
+    render_page(url, title, desc, content, "modelos", model_jsonld("001", url), og,
+                preload=_derivative("images/zeekr001/exterior-phantom-black.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero",
+                alts=alternates(lambda lang: url_model("001", lang)))
 
 
 def page_modelos():
+    url = url_section("modelos")
     cards = "".join(model_card(k) for k in MODEL_ORDER)
-    content = page_intro("Gama ZEEKR Paraguay", "Modelos", "Tres formas de vivir la movilidad eléctrica premium: el SUV de próxima generación, el SUV urbano y el crossover de lujo.") + f'<section class="models" aria-label="Modelos ZEEKR">{cards}</section>' + contact_strip()
+    content = page_intro("Gama ZEEKR Paraguay", "Modelos", "Tres formas de vivir la movilidad eléctrica premium: el SUV de próxima generación, el SUV urbano y el crossover de lujo.") + f'<section class="models" aria-label="{esc(_("Modelos ZEEKR"))}">{cards}</section>' + contact_strip()
     jsonld = graph(
-        {"@type": "CollectionPage", "name": "Modelos ZEEKR Paraguay", "url": DOMAIN + "/modelos/", "inLanguage": "es-PY",
+        {"@type": "CollectionPage", "name": _("Modelos ZEEKR Paraguay"), "url": DOMAIN + url, "inLanguage": LANGS[L]["html"],
          "mainEntity": {"@type": "ItemList", "itemListElement": [
-             {"@type": "ListItem", "position": i + 1, "name": MODELS[k]["name"], "url": DOMAIN + model_url(k)} for i, k in enumerate(MODEL_ORDER)]}},
-        breadcrumb([("Inicio", "/"), ("Modelos", "/modelos/")]))
-    render_page("/modelos/", "Modelos ZEEKR en Paraguay | 7X, X y 001 — ZEEKR Paraguay",
-                "Conocé la gama ZEEKR en Paraguay: ZEEKR 7X (SUV de próxima generación), ZEEKR X (SUV urbano premium) y ZEEKR 001 (crossover eléctrico de lujo). Fichas técnicas y test drive.",
-                content, "modelos", jsonld, og_image("images/hero/7x-desktop.jpg", "modelos"), body_cls="page-list")
+             {"@type": "ListItem", "position": i + 1, "name": MODELS[k]["name"], "url": DOMAIN + url_model(k)} for i, k in enumerate(MODEL_ORDER)]}},
+        breadcrumb([(_("Inicio"), url_home()), (_("Modelos"), url)]))
+    render_page(url, _("Modelos ZEEKR en Paraguay | 7X, X y 001 — ZEEKR Paraguay"),
+                _("Conocé la gama ZEEKR en Paraguay: ZEEKR 7X (SUV de próxima generación), ZEEKR X (SUV urbano premium) y ZEEKR 001 (crossover eléctrico de lujo). Fichas técnicas y test drive."),
+                content, "modelos", jsonld, og_image("images/hero/7x-desktop.jpg", "modelos"), body_cls="page-list",
+                alts=alternates(lambda lang: url_section("modelos", lang)))
 
 
 # ------------------------------------------------------------------ noticias
 def page_noticias():
+    url = url_section("noticias")
     featured = next((n for n in NEWS if n.get("body")), None)
     rest = [n for n in NEWS if n is not featured]
     feat_html = ""
     if featured:
-        url = news_url(featured)
-        pic = picture(featured["img"], featured["title"], (800, 1200, 1800), sizes="(min-width:992px) 60vw, 100vw", cls="feat-media", loading="eager", fetchpriority="high")
+        furl = url_news(featured)
+        pic = picture(featured["img"], _(featured["title"]), (800, 1200, 1800), sizes="(min-width:992px) 60vw, 100vw", cls="feat-media", loading="eager", fetchpriority="high",
+                      attrs=f' style="object-position:{featured["img_pos"]}"' if featured.get("img_pos") else "")
         feat_html = f'''
 <section class="section featured-news" aria-labelledby="featTitle">
   <article class="featured reveal">
-    <a class="featured-link" href="{url}">
+    <a class="featured-link" href="{furl}">
       {pic}
       <div class="featured-body">
-        <p class="news-meta"><span class="news-kicker">{featured["kicker"]}</span><time class="news-date" datetime="{featured["date"]}">{fecha_larga(featured["date"])}</time></p>
-        <h2 id="featTitle">{featured["title"]}</h2>
-        <p class="lead">{featured["lead"]}</p>
-        <span class="btn btn-cream btn-arrow"><span>Leer la nota</span>{ICON_ARROW}</span>
+        <p class="news-meta"><span class="news-kicker">{_(featured["kicker"])}</span><time class="news-date" datetime="{featured["date"]}">{fecha_larga(featured["date"])}</time></p>
+        <h2 id="featTitle">{_(featured["title"])}</h2>
+        <p class="lead">{_(featured["lead"])}</p>
+        <span class="btn btn-cream btn-arrow"><span>{_("Leer la nota")}</span>{ICON_ARROW}</span>
       </div>
     </a>
   </article>
 </section>'''
     grid = "".join(news_card(n) for n in rest)
     content = page_intro("ZEEKR Paraguay", "Noticias", "Lanzamientos, eventos y tecnología ZEEKR en Paraguay y el mundo.") + feat_html + f'''
-<section class="section news-archive" aria-label="Todas las noticias">
-  <div class="section-head reveal">{eyebrow("Novedades")}<h2>Más noticias</h2></div>
+<section class="section news-archive" aria-label="{esc(_("Todas las noticias"))}">
+  <div class="section-head reveal">{eyebrow("Novedades")}<h2>{_("Más noticias")}</h2></div>
   <div class="news-grid news-grid-dark">{grid}</div>
 </section>''' + contact_strip()
     jsonld = graph(
-        {"@type": "CollectionPage", "name": "Noticias — ZEEKR Paraguay", "url": DOMAIN + "/noticias/", "inLanguage": "es-PY",
+        {"@type": "CollectionPage", "name": _("Noticias — ZEEKR Paraguay"), "url": DOMAIN + url, "inLanguage": LANGS[L]["html"],
          "mainEntity": {"@type": "ItemList", "itemListElement": [
-             {"@type": "ListItem", "position": i + 1, "name": n["title"], **({"url": DOMAIN + news_url(n)} if news_url(n) else {})} for i, n in enumerate(NEWS)]}},
-        breadcrumb([("Inicio", "/"), ("Noticias", "/noticias/")]))
-    render_page("/noticias/", "Noticias ZEEKR Paraguay | Lanzamientos, eventos y tecnología EV",
-                "Todas las noticias de ZEEKR en Paraguay: lanzamientos, eventos, tecnología eléctrica, alianzas y novedades de los modelos 7X, X y 001.",
-                content, "noticias", jsonld, og_image(featured["img"] if featured else "images/hero/7x-desktop.jpg", "noticias"), body_cls="page-list")
+             {"@type": "ListItem", "position": i + 1, "name": _(n["title"]), **({"url": DOMAIN + url_news(n)} if url_news(n) else {})} for i, n in enumerate(NEWS)]}},
+        breadcrumb([(_("Inicio"), url_home()), (_("Noticias"), url)]))
+    render_page(url, _("Noticias ZEEKR Paraguay | Lanzamientos, eventos y tecnología EV"),
+                _("Todas las noticias de ZEEKR en Paraguay: lanzamientos, eventos, tecnología eléctrica, alianzas y novedades de los modelos 7X, X y 001."),
+                content, "noticias", jsonld, og_image(featured["img"] if featured else "images/hero/7x-desktop.jpg", "noticias"), body_cls="page-list",
+                alts=alternates(lambda lang: url_section("noticias", lang)))
 
 
 def page_article(n):
-    url = news_url(n)
+    url = url_news(n)
     m = MODELS.get(n.get("cta_model"))
-    cover = picture(n["img"], n["title"], (960, 1600, 2400), sizes="100vw", cls="article-cover", loading="eager", fetchpriority="high", attrs=f' style="object-position:{n["img_pos"]}"' if n.get("img_pos") else "")
-    paras = [f"<p>{p}</p>" for p in n["body"]]
+    cover = picture(n["img"], _(n["title"]), (960, 1600, 2400), sizes="100vw", cls="article-cover", loading="eager", fetchpriority="high", attrs=f' style="object-position:{n["img_pos"]}"' if n.get("img_pos") else "")
+    paras = [f"<p>{_(p)}</p>" for p in n["body"]]
     if n.get("quote"):
-        q, who, org = n["quote"]
-        foot = f"<footer><cite>{who}</cite>{' · ' + org if org else ''}</footer>" if who else (f"<footer>{org}</footer>" if org else "")
-        paras.insert(n.get("quote_pos", 2), f'<blockquote class="article-quote"><p>“{q}”</p>{foot}</blockquote>')
+        q, who, org_ = n["quote"]
+        foot = f"<footer><cite>{who}</cite>{' · ' + org_ if org_ else ''}</footer>" if who else (f"<footer>{_(org_)}</footer>" if org_ else "")
+        paras.insert(n.get("quote_pos", 2), f'<blockquote class="article-quote"><p>“{_(q)}”</p>{foot}</blockquote>')
     body = "".join(paras)
     gallery = ""
     if n.get("gallery"):
-        figs = "".join(f'<figure class="masonry-item reveal">{picture(src, alt, (480, 800, 1200), sizes="(min-width:992px) 33vw, (min-width:600px) 50vw, 100vw")}<figcaption>{alt}</figcaption></figure>' for src, alt in n["gallery"])
-        gallery = f'<section class="section article-gallery" aria-label="Galería del evento"><div class="section-head reveal">{eyebrow("Galería")}<h2>La noche en imágenes</h2></div><div class="masonry">{figs}</div></section>'
+        figs = "".join(f'<figure class="masonry-item reveal">{picture(src, _(alt), (480, 800, 1200), sizes="(min-width:992px) 33vw, (min-width:600px) 50vw, 100vw")}<figcaption>{_(alt)}</figcaption></figure>' for src, alt in n["gallery"])
+        gallery = f'<section class="section article-gallery" aria-label="{esc(_("Galería del evento"))}"><div class="section-head reveal">{eyebrow("Galería")}<h2>{_("La noche en imágenes")}</h2></div><div class="masonry">{figs}</div></section>'
     model_cta = ""
     if m:
         model_cta = f'''
-<aside class="article-model reveal" aria-label="Modelo relacionado">
+<aside class="article-model reveal" aria-label="{esc(_("Modelo relacionado"))}">
   {picture(m["card"], m["name"], (640, 960, 1400), sizes="(min-width:992px) 40vw, 100vw", cls="article-model-media", attrs=f' style="object-position:{m["card_pos"]}"')}
   <div class="article-model-body">
     {eyebrow(m["eyebrow"])}
     <h2>{m["name"]}</h2>
-    <p>{m["claim"]}</p>
-    <div class="model-actions">{btn(f"Descubrí el {m['name']}", href=model_url(n["cta_model"]), kind="cream", icon=ICON_ARROW, extra="btn-arrow")}{btn("Agendá tu prueba de manejo", kind="outline", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}</div>
+    <p>{_(m["claim"])}</p>
+    <div class="model-actions">{btn(_("Descubrí el {model}").replace("{model}", m['name']), href=url_model(n["cta_model"]), kind="cream", icon=ICON_ARROW, extra="btn-arrow")}{btn(_("Agendá tu prueba de manejo"), kind="outline", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}</div>
   </div>
 </aside>'''
+    share_title = _(n["title"])
     content = f'''
 <article class="article">
   <header class="article-head">
     <div class="article-head-inner reveal">
-      <nav class="crumbs" aria-label="Migas de pan"><a href="/">Inicio</a><span aria-hidden="true">/</span><a href="/noticias/">Noticias</a></nav>
-      <p class="news-meta"><span class="news-kicker">{n["kicker"]}</span><time class="news-date" datetime="{n["date"]}">{fecha_larga(n["date"])}</time></p>
-      <h1>{n["title"]}</h1>
-      <p class="lead">{n["lead"]}</p>
+      <nav class="crumbs" aria-label="{esc(_("Migas de pan"))}"><a href="{url_home()}">{_("Inicio")}</a><span aria-hidden="true">/</span><a href="{url_section('noticias')}">{_("Noticias")}</a></nav>
+      <p class="news-meta"><span class="news-kicker">{_(n["kicker"])}</span><time class="news-date" datetime="{n["date"]}">{fecha_larga(n["date"])}</time></p>
+      <h1>{_(n["title"])}</h1>
+      <p class="lead">{_(n["lead"])}</p>
     </div>
   </header>
   <div class="article-cover-wrap reveal">{cover}</div>
   <div class="article-body reveal">{body}
-    <p class="article-share">Compartir: <a href="https://wa.me/?text={esc(n['title'])}%20{DOMAIN}{url}" target="_blank" rel="noopener">WhatsApp</a> · <a href="https://www.linkedin.com/sharing/share-offsite/?url={DOMAIN}{url}" target="_blank" rel="noopener">LinkedIn</a></p>
+    <p class="article-share">{_("Compartir")}: <a href="https://wa.me/?text={esc(share_title)}%20{DOMAIN}{url}" target="_blank" rel="noopener">WhatsApp</a> · <a href="https://www.linkedin.com/sharing/share-offsite/?url={DOMAIN}{url}" target="_blank" rel="noopener">LinkedIn</a></p>
   </div>
   {gallery}
   {model_cta}
 </article>''' + contact_strip(m["name"] if m else None)
-    images = [DOMAIN + _derivative(n["img"], 1600, "jpeg", False)[0]] + [DOMAIN + _derivative(s, 1200, "jpeg", False)[0] for s, _ in n.get("gallery", [])]
-    article = {"@type": "NewsArticle", "headline": n["title"], "description": n["lead"], "datePublished": n["date"], "dateModified": n["date"],
-               "inLanguage": "es-PY", "url": DOMAIN + url, "mainEntityOfPage": DOMAIN + url, "image": images,
-               "articleSection": "Eventos", "author": {"@id": DOMAIN + "/#org"}, "publisher": {"@id": DOMAIN + "/#org"},
+    images = [DOMAIN + _derivative(n["img"], 1600, "jpeg", False)[0]] + [DOMAIN + _derivative(s, 1200, "jpeg", False)[0] for s, _a in n.get("gallery", [])]
+    article = {"@type": "NewsArticle", "headline": _(n["title"]), "description": _(n["lead"]), "datePublished": n["date"], "dateModified": n["date"],
+               "inLanguage": LANGS[L]["html"], "url": DOMAIN + url, "mainEntityOfPage": DOMAIN + url, "image": images,
+               "articleSection": _("Eventos"), "author": {"@id": DOMAIN + "/#org"}, "publisher": {"@id": DOMAIN + "/#org"},
                **({"contentLocation": {"@type": "Place", "name": n["place"], "address": {"@type": "PostalAddress", "addressLocality": n.get("place_locality", "Asunción"), "addressCountry": "PY"}}} if n.get("place") else {}),
                "about": [{"@type": "Car", "name": m["name"], "brand": {"@type": "Brand", "name": "ZEEKR"}}] if m else []}
-    jsonld = graph(article, breadcrumb([("Inicio", "/"), ("Noticias", "/noticias/"), (n["title"], url)]))
-    render_page(url, f"{n['title']} — ZEEKR Paraguay", n["lead"], content, "noticias", jsonld,
-                og_image(n["img"], n["slug"]), body_cls="page-article", lastmod=n["date"])
+    jsonld = graph(article, breadcrumb([(_("Inicio"), url_home()), (_("Noticias"), url_section("noticias")), (_(n["title"]), url)]))
+    render_page(url, f"{_(n['title'])} — ZEEKR Paraguay", _(n["lead"]), content, "noticias", jsonld,
+                og_image(n["img"], n["slug"]), body_cls="page-article", lastmod=n["date"],
+                alts=alternates(lambda lang: url_news(n, lang)))
 
 
 # ------------------------------------------------------------------ nosotros
 def page_nosotros():
+    url = url_section("nosotros")
     hero = model_hero({"name": "Nosotros", "tagline": "Somos ZEEKR", "eyebrow": "Somos ZEEKR",
                        "claim": "Por medio del diseño, la tecnología y la innovación, motivamos a todos a reimaginar los automóviles eléctricos.",
-                       "card": "images/nosotros/manufactura2.jpg", "card_pos": "50% 50%", "stats": []}, cta=False,
+                       "card": "images/nosotros/manufactura2.jpg", "hero_pos": "50% 50%", "stats": []}, cta=False,
                       h1="Más allá del punto de partida")
     content = hero + f'''
 <section class="section" aria-labelledby="nameTitle">
-  <div class="section-head reveal">{eyebrow("Nuestro nombre")}<h2 id="nameTitle">ZEEKR: tres letras, una idea</h2></div>
+  <div class="section-head reveal">{eyebrow("Nuestro nombre")}<h2 id="nameTitle">{_("ZEEKR: tres letras, una idea")}</h2></div>
   <ul class="feature-list cols-3 brand-letters">
-    <li class="feature reveal"><h3><span class="big-letter">ZE</span></h3><p>Zero: el punto de partida hacia las posibilidades infinitas.</p></li>
-    <li class="feature reveal"><h3><span class="big-letter">E</span></h3><p>La evolución hacia la era eléctrica.</p></li>
-    <li class="feature reveal"><h3><span class="big-letter">KR</span></h3><p>Kriptón: un gas inusual que emite luz cuando se electrifica.</p></li>
+    <li class="feature reveal"><h3><span class="big-letter">ZE</span></h3><p>{_("Zero: el punto de partida hacia las posibilidades infinitas.")}</p></li>
+    <li class="feature reveal"><h3><span class="big-letter">E</span></h3><p>{_("La evolución hacia la era eléctrica.")}</p></li>
+    <li class="feature reveal"><h3><span class="big-letter">KR</span></h3><p>{_("Kriptón: un gas inusual que emite luz cuando se electrifica.")}</p></li>
   </ul>
 </section>''' + sec_features("Nuestros valores", "Un ambiente armonioso entre el ser humano, la tecnología y la naturaleza", [
         ("Diversidad", "Promovemos la diversidad y celebramos las diferencias. Con una actitud abierta logramos innovar para un mejor futuro."),
@@ -1183,12 +1306,13 @@ def page_nosotros():
         sec_split("Geely Holding Group", "Liderando el mundo de la movilidad desde Hangzhou", "Geely Holding Group posee, invierte y gestiona múltiples marcas —Geely Auto, Lynk &amp; Co, ZEEKR, Volvo, Polestar, Lotus, LEVC, Farizon, Radar y Cao Cao Mobility— con foco en innovación y movilidad sostenible. ZEEKR es la marca de lujo eléctrico del Grupo, comprometida con liderar el futuro de la movilidad centrada en la tecnología y el consumidor.", "images/nosotros/holding.jpg", "Sede de Geely Holding Group", reverse=True, dark=True) + \
         sec_band("images/nosotros/valor2.png", "Dos ZEEKR 001 frente a un puente", "En Paraguay", "Santa Rosa Paraguay, distribuidor oficial", "Ventas, postventa y asesoramiento especializado para que tu experiencia ZEEKR sea completa desde el primer día.") + \
         contact_strip()
-    jsonld = graph({"@type": "AboutPage", "name": "Nosotros — ZEEKR Paraguay", "url": DOMAIN + "/nosotros/", "inLanguage": "es-PY", "about": {"@id": DOMAIN + "/#org"}},
-                   breadcrumb([("Inicio", "/"), ("Nosotros", "/nosotros/")]))
-    render_page("/nosotros/", "Nosotros | ZEEKR Paraguay — la marca eléctrica premium de Geely",
-                "Conocé la historia de ZEEKR: diseño en Gotemburgo, manufactura inteligente en Hangzhou, el Grupo Geely y Santa Rosa Paraguay como distribuidor oficial de la movilidad eléctrica premium.",
+    jsonld = graph({"@type": "AboutPage", "name": _("Nosotros — ZEEKR Paraguay"), "url": DOMAIN + url, "inLanguage": LANGS[L]["html"], "about": {"@id": DOMAIN + "/#org"}},
+                   breadcrumb([(_("Inicio"), url_home()), (_("Nosotros"), url)]))
+    render_page(url, _("Nosotros | ZEEKR Paraguay — la marca eléctrica premium de Geely"),
+                _("Conocé la historia de ZEEKR: diseño en Gotemburgo, manufactura inteligente en Hangzhou, el Grupo Geely y Santa Rosa Paraguay como distribuidor oficial de la movilidad eléctrica premium."),
                 content, "nosotros", jsonld, og_image("images/nosotros/manufactura2.jpg", "nosotros"),
-                preload=_derivative("images/nosotros/manufactura2.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero")
+                preload=_derivative("images/nosotros/manufactura2.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero",
+                alts=alternates(lambda lang: url_section("nosotros", lang)))
 
 
 # ------------------------------------------------------------------ 404
@@ -1197,20 +1321,24 @@ def page_404():
 <section class="page-intro notfound">
   <div class="page-intro-inner">
     {eyebrow("Error 404")}
-    <h1>Esta página no existe</h1>
-    <p class="lead">Puede que el enlace haya cambiado. Volvé al inicio o explorá los modelos ZEEKR.</p>
-    <div class="model-actions">{btn("Ir al inicio", href="/", kind="cream")}{btn("Ver modelos", href="/modelos/", kind="outline", icon=ICON_ARROW, extra="btn-arrow")}</div>
+    <h1>{_("Esta página no existe")}</h1>
+    <p class="lead">{_("Puede que el enlace haya cambiado. Volvé al inicio o explorá los modelos ZEEKR.")}</p>
+    <div class="model-actions">{btn(_("Ir al inicio"), href=url_home(), kind="cream")}{btn(_("Ver modelos"), href=url_section("modelos"), kind="outline", icon=ICON_ARROW, extra="btn-arrow")}</div>
   </div>
 </section>'''
-    render_page("/404.html", "Página no encontrada — ZEEKR Paraguay", "La página que buscás no existe.", content, "",
-                graph(), og_image("images/hero/7x-desktop.jpg", "home"), body_cls="page-list")
+    render_page(f"{prefix()}/404.html", _("Página no encontrada — ZEEKR Paraguay"), _("La página que buscás no existe."), content, "",
+                graph(), og_image("images/hero/7x-desktop.jpg", "home"), body_cls="page-list", alts=alternates(url_home))
 
 
 # ------------------------------------------------------------------ sitemap / robots
 def build_meta():
-    sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for path, lastmod in PAGES:
-        sm.append(f"  <url><loc>{DOMAIN}{path}</loc><lastmod>{lastmod}</lastmod></url>")
+    sm = ['<?xml version="1.0" encoding="UTF-8"?>',
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">']
+    for path, lastmod, alts in PAGES:
+        links = "".join(f'\n    <xhtml:link rel="alternate" hreflang="{LANGS[k]["hreflang"]}" href="{DOMAIN}{alts[k]}"/>' for k in alts)
+        if "es" in alts:
+            links += f'\n    <xhtml:link rel="alternate" hreflang="x-default" href="{DOMAIN}{alts["es"]}"/>'
+        sm.append(f"  <url>\n    <loc>{DOMAIN}{path}</loc>\n    <lastmod>{lastmod}</lastmod>{links}\n  </url>")
     sm.append("</urlset>")
     open("sitemap.xml", "w").write("\n".join(sm) + "\n")
     open("robots.txt", "w").write(f"User-agent: *\nAllow: /\nDisallow: /404.html\n\nSitemap: {DOMAIN}/sitemap.xml\n")
@@ -1229,12 +1357,11 @@ def build_meta():
     print("OK sitemap.xml robots.txt _redirects _headers")
 
 
-def cleanup_legacy():
+def cleanup():
     for f in ["zeekr001.html", "zeekrx.html", "zeekr7x.html", "noticias.html", "nosotros.html"]:
         if os.path.exists(f):
             os.remove(f)
             print("rm", f)
-    # derivados huérfanos en images/_opt
     for root, _dirs, files in os.walk(OPT_DIR):
         for f in files:
             path = os.path.join(root, f)
@@ -1243,8 +1370,9 @@ def cleanup_legacy():
                 print("rm", path)
 
 
-def main():
-    build_icons()
+def build_lang(lang):
+    global L
+    L = lang
     build_index()
     page_modelos()
     page_7x()
@@ -1256,8 +1384,18 @@ def main():
             page_article(n)
     page_nosotros()
     page_404()
+
+
+def main():
+    build_icons()
+    for lang in LANGS:
+        build_lang(lang)
     build_meta()
-    cleanup_legacy()
+    cleanup()
+    for lang, miss in MISSING.items():
+        if miss:
+            print(f"\n⚠ {lang}: {len(miss)} textos sin traducción (se usó español). Ver i18n_missing_{lang}.txt")
+            open(f"i18n_missing_{lang}.txt", "w").write("\n".join(sorted(miss)) + "\n")
 
 
 if __name__ == "__main__":
