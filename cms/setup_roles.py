@@ -52,9 +52,12 @@ for c in CONTENT:
     for a in ACTIONS:
         # create no filtra (el ítem aún no existe): el preset fija site = el del usuario en el form de Studio,
         # pero es solo un default que el caller puede pisar — la validation es la que de verdad lo exige por API.
+        # En update, la misma validation solo se evalúa si 'site' viene en el payload (Directus no la dispara
+        # cuando el campo está ausente), así que también bloquea mover un ítem a otro sitio sin romper los
+        # updates parciales que no tocan 'site'.
         perm(ed["id"], c, a, None if a == "create" else SITE,
              presets={"site": "$CURRENT_USER.site"} if a == "create" else None,
-             validation=SITE if a == "create" else None)
+             validation=SITE if a in ("create", "update") else None)
 for c, filt in {**CHILD_FILTER, **TR_FILTER}.items():
     for a in ACTIONS:
         perm(ed["id"], c, a, None if a == "create" else filt)
