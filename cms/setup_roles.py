@@ -1,5 +1,10 @@
 # cms/setup_roles.py — roles/políticas/permisos + usuario de servicio del builder. Idempotente.
-# Uso: DIRECTUS_ADMIN_TOKEN=... BUILDER_STATIC_TOKEN=<openssl rand -hex 32> python3 cms/setup_roles.py
+# Uso (primera vez, crea el usuario builder):
+#   DIRECTUS_ADMIN_TOKEN=... BUILDER_STATIC_TOKEN=<openssl rand -hex 32> python3 cms/setup_roles.py
+# Uso (reruns — no toca el token del builder ya emitido):
+#   DIRECTUS_ADMIN_TOKEN=... python3 cms/setup_roles.py
+# Uso (rotar el token del builder a propósito):
+#   DIRECTUS_ADMIN_TOKEN=... ROTATE_BUILDER_TOKEN=1 BUILDER_STATIC_TOKEN=<nuevo> python3 cms/setup_roles.py
 import os
 from common import api
 
@@ -30,8 +35,8 @@ def ensure_role(name, policy_id, icon):
     return role
 
 
-def perm(policy, collection, action, filt=None, fields="*", presets=None):
-    body = {"policy": policy, "collection": collection, "action": action, "permissions": filt or {}, "validation": {}, "presets": presets or {},
+def perm(policy, collection, action, filt=None, fields="*", presets=None, validation=None):
+    body = {"policy": policy, "collection": collection, "action": action, "permissions": filt or {}, "validation": validation or {}, "presets": presets or {},
             "fields": [fields] if isinstance(fields, str) else fields}
     found = api("GET", f"/permissions?filter[policy][_eq]={policy}&filter[collection][_eq]={collection}&filter[action][_eq]={action}&limit=1")
     if found:
@@ -45,8 +50,11 @@ ed = ensure_policy("Editor")
 ensure_role("Editor", ed["id"], "edit")
 for c in CONTENT:
     for a in ACTIONS:
-        # create no filtra (el ítem aún no existe): el preset fija site = el del usuario
-        perm(ed["id"], c, a, None if a == "create" else SITE, presets={"site": "$CURRENT_USER.site"} if a == "create" else None)
+        # create no filtra (el ítem aún no existe): el preset fija site = el del usuario en el form de Studio,
+        # pero es solo un default que el caller puede pisar — la validation es la que de verdad lo exige por API.
+        perm(ed["id"], c, a, None if a == "create" else SITE,
+             presets={"site": "$CURRENT_USER.site"} if a == "create" else None,
+             validation=SITE if a == "create" else None)
 for c, filt in {**CHILD_FILTER, **TR_FILTER}.items():
     for a in ACTIONS:
         perm(ed["id"], c, a, None if a == "create" else filt)
@@ -74,10 +82,18 @@ for c in ["builds", "translation_meta"] + list(TR_FILTER):
         perm(bp["id"], c, a)
 for c in ["section_gallery", "news_gallery"]:
     perm(bp["id"], c, "update", fields=["alt_en", "alt_pt", "alt_zh"])
-tok = os.environ.get("BUILDER_STATIC_TOKEN") or exit("falta BUILDER_STATIC_TOKEN")
 u = api("GET", "/users?filter[email][_eq]=builder@santarosa.com.py&limit=1")
+rotate = os.environ.get("ROTATE_BUILDER_TOKEN") == "1"
 if u:
-    api("PATCH", f"/users/{u[0]['id']}", {"token": tok, "role": brole["id"], "status": "active"})
+    if rotate:
+        tok = os.environ.get("BUILDER_STATIC_TOKEN") or exit("falta BUILDER_STATIC_TOKEN (ROTATE_BUILDER_TOKEN=1)")
+        api("PATCH", f"/users/{u[0]['id']}", {"token": tok, "role": brole["id"], "status": "active"})
+        print("OK roles: Editor, Builder; token del builder rotado")
+    else:
+        # nunca reescribir el token en un rerun normal: romperia al builder ya desplegado con el token viejo
+        api("PATCH", f"/users/{u[0]['id']}", {"role": brole["id"], "status": "active"})
+        print("OK roles: Editor, Builder; token del builder sin cambios (ROTATE_BUILDER_TOKEN=1 para rotar)")
 else:
+    tok = os.environ.get("BUILDER_STATIC_TOKEN") or exit("falta BUILDER_STATIC_TOKEN")
     api("POST", "/users", {"email": "builder@santarosa.com.py", "first_name": "Builder", "role": brole["id"], "token": tok, "status": "active"})
-print("OK roles: Editor, Builder; usuario builder@santarosa.com.py con token")
+    print("OK roles: Editor, Builder; usuario builder@santarosa.com.py con token")

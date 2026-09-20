@@ -15,13 +15,30 @@ DOMAIN_JS = r"""module.exports = async function(data) {
 
 
 def upsert_flow(name, trigger, options, ops, icon, description):
-    """Crea el flow con su cadena de operaciones; si existe, actualiza las opciones de cada operación por key."""
-    found = api("GET", f"/flows?filter[name][_eq]={quote(name)}&fields=id,operations.id,operations.key&limit=1")
+    """Crea el flow con su cadena de operaciones; si existe, re-sincroniza sus campos, actualiza las
+    operaciones ya presentes (por key) y crea + encadena las que falten, preservando el orden de `ops`."""
+    found = api("GET", f"/flows?filter[name][_eq]={quote(name)}&fields=id,operation,operations.id,operations.key&limit=1")
     if found:
+        flow_id = found[0]["id"]
+        # re-sincroniza los campos del flow (antes solo se tocaban al crearlo)
+        api("PATCH", f"/flows/{flow_id}", {"icon": icon, "description": description, "status": "active",
+                                            "trigger": trigger, "accountability": "all", "options": options})
         keys = {o["key"]: o["id"] for o in found[0].get("operations", [])}
+        prev = None
         for key, typ, opts in ops:
             if key in keys:
                 api("PATCH", f"/operations/{keys[key]}", {"options": opts})
+                cur = keys[key]
+            else:
+                # falta esta operación (ej.: se agregó una nueva al final de `ops`) — crearla y encadenarla
+                cur = api("POST", "/operations", {"flow": flow_id, "key": key, "type": typ, "options": opts,
+                                                   "position_x": 19 + len(keys) * 20, "position_y": 1})["id"]
+                keys[key] = cur
+                if prev:
+                    api("PATCH", f"/operations/{prev}", {"resolve": cur})
+                else:
+                    api("PATCH", f"/flows/{flow_id}", {"operation": cur})
+            prev = cur
         print("  =", name)
         return
     flow = api("POST", "/flows", {"name": name, "icon": icon, "description": description, "status": "active", "trigger": trigger, "accountability": "all", "options": options})
