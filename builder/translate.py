@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from .transform import LANG_KEY, SRC, TEXT_KEYS, TRANSLATABLE, galleries, html_to_paragraphs, tr, walk
+from .transform import LANG_KEY, TEXT_KEYS, TRANSLATABLE, galleries, html_to_paragraphs, tr, walk
 
 MODEL = "claude-sonnet-5"
 LANG_NAME = {"en": "English (neutral, international)", "pt-BR": "Brazilian Portuguese", "zh-Hans": "Simplified Chinese"}
@@ -32,14 +32,16 @@ def now():
 
 
 class Claude:
-    def __init__(self, api_key, model=MODEL):
+    def __init__(self, api_key, model=MODEL, timeout=240, transport=None):
         self.api_key, self.model = api_key, model
+        self.http = httpx.Client(base_url="https://api.anthropic.com",
+                                  headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                                  timeout=timeout, transport=transport)
 
     def translate(self, texts, lang):
-        r = httpx.post("https://api.anthropic.com/v1/messages", timeout=240,
-                       headers={"x-api-key": self.api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                       json={"model": self.model, "max_tokens": 8000, "system": SYSTEM,
-                             "messages": [{"role": "user", "content": f"Idioma destino: {LANG_NAME[lang]}\nTextos (JSON):\n{json.dumps(list(texts), ensure_ascii=False)}"}]})
+        r = self.http.post("/v1/messages",
+                            json={"model": self.model, "max_tokens": 8000, "system": SYSTEM,
+                                  "messages": [{"role": "user", "content": f"Idioma destino: {LANG_NAME[lang]}\nTextos (JSON):\n{json.dumps(list(texts), ensure_ascii=False)}"}]})
         r.raise_for_status()
         text = "".join(b.get("text", "") for b in r.json()["content"] if b.get("type") == "text")
         out = json.loads(text[text.index("["):text.rindex("]") + 1])
@@ -134,21 +136,32 @@ def sync_translations(dx, raw, client, log=print):
                 upsert_meta(coll, row["id"], field, lang, sh)
             stats["translated"] += len(todo)
 
+    pending = {lang: [] for lang in LANG_NAME}   # lang → [(coll, g, field, es), ...] de todas las galerías, agrupado para lotear por idioma
     for coll, g in galleries(raw):
         es = g.get("alt_es")
         if not es:
             continue
-        missing = [(lang, f"alt_{LANG_KEY[lang]}") for lang in LANG_NAME if not g.get(f"alt_{LANG_KEY[lang]}")]
-        patch = {}
-        for lang, field in missing:
-            try:
-                patch[field] = client.translate([es], lang)[0]
-            except Exception as e:  # noqa: BLE001
-                stats["errors"] += 1
-                log(f"⚠ traducción alt {coll}#{g.get('id')} {lang}: {e}")
-        if patch:
-            dx.update(coll, g["id"], patch)
-            g.update(patch)
-            stats["translated"] += len(patch)
+        for lang in LANG_NAME:
+            field = f"alt_{LANG_KEY[lang]}"
+            if not g.get(field):
+                pending[lang].append((coll, g, field, es))
+
+    row_patches = {}   # id(fila) → (coll, g, patch) — junta los campos de varios idiomas de la misma fila en un solo update
+    for lang, items in pending.items():
+        if not items:
+            continue
+        try:
+            out = _chunked([es for *_, es in items], client, lang)
+        except Exception as e:  # noqa: BLE001 — se cuenta el idioma entero como error y se sigue con el resto
+            stats["errors"] += len(items)
+            log(f"⚠ traducción alt {lang}: {e}")
+            continue
+        for (coll, g, field, _es), val in zip(items, out):
+            row_patches.setdefault(id(g), (coll, g, {}))[2][field] = val
+
+    for coll, g, patch in row_patches.values():
+        dx.update(coll, g["id"], patch)
+        g.update(patch)
+        stats["translated"] += len(patch)
     log(f"traducciones: {stats}")
     return stats
