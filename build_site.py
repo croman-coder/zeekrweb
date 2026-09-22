@@ -37,6 +37,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 # --- CLI: con --content los datos salen de un content.json; sin él, de los literales de abajo
 _ap = argparse.ArgumentParser(description="Genera el sitio estático ZEEKR")
 _ap.add_argument("--content", help="content.json (si se omite, usa los literales del código)")
+_ap.add_argument("--no-cleanup", action="store_true", help="no purgar los derivados huérfanos de images/_opt (builds de paridad)")
 CLI = _ap.parse_args() if __name__ == "__main__" else _ap.parse_args([])
 if CLI.content:
     CLI.content = os.path.abspath(CLI.content)   # más abajo hacemos chdir a ROOT
@@ -562,6 +563,17 @@ HOME_FAQ = [
     ("¿Cómo agendo una prueba de manejo?", "Escribinos por WhatsApp al 0971 370 006 o completá el formulario de contacto: un asesor te responde en el día."),
 ]
 
+# --- textos de sitio: default de setting() y única fuente para scripts/export_content.py
+HEADER_MENU_DEFAULT = [{"label": "Modelos", "target": "modelos", "url": ""}, {"label": "Nosotros", "target": "nosotros", "url": ""}, {"label": "Noticias", "target": "noticias", "url": ""}]
+COOKIE_TEXT = "Cuando visitás nuestro sitio web (“Plataformas ZEEKR”), utilizamos cookies y otras tecnologías de seguimiento similares para mejorar la funcionalidad de las Plataformas ZEEKR, el rendimiento, medir el tráfico del sitio web, analizar el comportamiento del usuario y ajustar nuestro contenido y servicios. Si hacés clic en “Aceptar todo” nos autorizás a procesar tus datos personales para tales fines. Si hacés clic en “Rechazar todo” solo utilizaremos cookies y tecnologías estrictamente necesarias para la funcionalidad de la Plataforma ZEEKR. Para más información o para consentir cookies específicas, hacé clic en “Configuración de cookies”."
+LEGAL_DISCLAIMER = "Toda la información contenida en este material está basada en datos disponibles al momento de su publicación. Las fotos y pantallas son de carácter ilustrativo y de referencia. Los datos de autonomía y prestaciones se basan en ciclos de prueba (WLTP / pruebas de ingeniería) y pueden variar según clima, camino, carga, batería y configuración del vehículo."
+FOOTER_TAGLINE = "Distribuidor oficial ZEEKR en Paraguay."
+STATEMENT_TITLE = "Vehículos eléctricos premium que reimaginan la forma de moverse."
+STATEMENT_TEXT = "Diseño escandinavo, tecnología de vanguardia y el respaldo del Grupo Geely. ZEEKR llega a Paraguay de la mano de Santa Rosa Paraguay, con los modelos 001, X y 7X."
+ORG_DESCRIPTION = "Distribuidor oficial de ZEEKR en Paraguay: vehículos eléctricos premium ZEEKR 001, ZEEKR X y ZEEKR 7X."
+SEO_TITLE = "ZEEKR Paraguay | Vehículos eléctricos premium: 7X, X y 001"
+SEO_DESCRIPTION = "Vehículos eléctricos premium ZEEKR en Paraguay: ZEEKR 7X, X y 001. Diseño escandinavo, tecnología líder y autonomía real. Agendá tu prueba de manejo."
+
 
 # --------------------------------------------------- contenido desde content.json
 SETTINGS = None      # dict desde content.json; None = literales del código
@@ -661,15 +673,18 @@ def header(active="", alts=None):
 
     def cls(a):
         return "menu-link is-active" if a == active else "menu-link"
-    menu = setting("header_menu", [{"label": "Modelos", "target": "modelos", "url": ""}, {"label": "Nosotros", "target": "nosotros", "url": ""}, {"label": "Noticias", "target": "noticias", "url": ""}])
+    menu = setting("header_menu", HEADER_MENU_DEFAULT)
     links = []
     for it in menu:
-        if it["target"] == "modelos":
+        target = it.get("target", "")
+        if target == "modelos":
             links.append(f'<button class="menu-link models-trigger {cls("modelos")}" type="button" aria-expanded="false" aria-controls="modelsPanel" data-toggle-models>{_(it["label"])}</button>')
-        elif it["target"] == "url":
+        elif target == "url":
             links.append(f'<a class="menu-link" href="{it["url"]}">{_(it["label"])}</a>')
+        elif target in LANGS["es"]["slugs"]:
+            links.append(f'<a class="{cls(target)}" href="{url_section(target)}">{_(it["label"])}</a>')
         else:
-            links.append(f'<a class="{cls(it["target"])}" href="{url_section(it["target"])}">{_(it["label"])}</a>')
+            print("⚠ menú: destino desconocido, se omite el ítem:", target or it.get("label", ""))
     nav = "\n        ".join(links)
     gates = "\n".join(
         f'''        <a class="gate-card" href="{url_model(k)}">
@@ -678,7 +693,7 @@ def header(active="", alts=None):
           <span class="gate-sub">{_(MODELS[k]["eyebrow"])}</span>
         </a>''' for k in reversed(MODEL_ORDER))
     mobile_models = "\n      ".join(f'<a data-close-menu href="{url_model(k)}">{MODELS[k]["name"]}</a>' for k in MODEL_ORDER)
-    cookie = setting("cookie_text", "Cuando visitás nuestro sitio web (“Plataformas ZEEKR”), utilizamos cookies y otras tecnologías de seguimiento similares para mejorar la funcionalidad de las Plataformas ZEEKR, el rendimiento, medir el tráfico del sitio web, analizar el comportamiento del usuario y ajustar nuestro contenido y servicios. Si hacés clic en “Aceptar todo” nos autorizás a procesar tus datos personales para tales fines. Si hacés clic en “Rechazar todo” solo utilizaremos cookies y tecnologías estrictamente necesarias para la funcionalidad de la Plataforma ZEEKR. Para más información o para consentir cookies específicas, hacé clic en “Configuración de cookies”.")
+    cookie = setting("cookie_text", COOKIE_TEXT)
     return f'''
 <a class="skip-link" href="#main">{_("Saltar al contenido")}</a>
 <header class="site-header" id="siteHeader">
@@ -746,8 +761,8 @@ def header(active="", alts=None):
 def footer():
     phones = "".join(f'<li><a href="tel:{tel}"><span class="ph-kind">{_(kind)}</span> {num}</a></li>' for kind, num, tel in PHONES)
     model_links = "\n        ".join(f'<li><a href="{url_model(k)}">{MODELS[k]["name"]}</a></li>' for k in MODEL_ORDER)
-    tagline = setting("footer_tagline", "Distribuidor oficial ZEEKR en Paraguay.")
-    disclaimer = setting("legal_disclaimer", "Toda la información contenida en este material está basada en datos disponibles al momento de su publicación. Las fotos y pantallas son de carácter ilustrativo y de referencia. Los datos de autonomía y prestaciones se basan en ciclos de prueba (WLTP / pruebas de ingeniería) y pueden variar según clima, camino, carga, batería y configuración del vehículo.")
+    tagline = setting("footer_tagline", FOOTER_TAGLINE)
+    disclaimer = setting("legal_disclaimer", LEGAL_DISCLAIMER)
     social = setting("social", SOCIAL_DEFAULT)
     icons = []
     for s in social:
@@ -957,32 +972,40 @@ def render_page(path, title, desc, content, nav_active, jsonld, og_img, preload=
     print("OK", out)
 
 
+def sales_phone():
+    """Teléfono de ventas (el primero de ese tipo; si no hay tipo Ventas, el primero de la lista)."""
+    return next((p for p in PHONES if p[0] == "Ventas"), PHONES[0] if PHONES else None)
+
+
 def contact_points():
-    def fmt(e164):  # +595971370006 -> +595-971-370-006
+    def fmt(e164):  # +595971370006 -> +595-971-370-006; si no es un PY de 9 dígitos, se deja tal cual
         n = e164[4:]
-        return f"+595-{n[:3]}-{n[3:6]}-{n[6:]}"
-    sales = next((p for p in PHONES if p[0] == "Ventas"), PHONES[0])
+        return f"+595-{n[:3]}-{n[3:6]}-{n[6:]}" if e164.startswith("+595") and len(n) == 9 and n.isdigit() else e164
+    sales = sales_phone()
     cs = next((p for p in PHONES if p[0] == "Postventa"), None)
-    pts = [{"@type": "ContactPoint", "telephone": fmt(sales[2]), "contactType": "sales", "areaServed": "PY", "availableLanguage": list(LANGS)}]
+    pts = [{"@type": "ContactPoint", "telephone": fmt(sales[2]), "contactType": "sales", "areaServed": "PY", "availableLanguage": list(LANGS)}] if sales else []
     if cs:
         pts.append({"@type": "ContactPoint", "telephone": fmt(cs[2]), "contactType": "customer service", "areaServed": "PY", "availableLanguage": ["es"]})
     return pts
 
 
 def org():
-    return {
+    sales = sales_phone()
+    o = {
         "@type": ["AutoDealer", "Organization"], "@id": DOMAIN + "/#org",
         "name": SITE_NAME, "alternateName": "Zeekr Paraguay", "url": DOMAIN + "/",
         "logo": {"@type": "ImageObject", "url": DOMAIN + "/icons/icon-512.png", "width": 512, "height": 512},
         "image": DOMAIN + "/images/_opt/og/home.jpg",
-        "description": _(setting("org_description", "Distribuidor oficial de ZEEKR en Paraguay: vehículos eléctricos premium ZEEKR 001, ZEEKR X y ZEEKR 7X.")),
+        "description": _(setting("org_description", ORG_DESCRIPTION)),
         "brand": {"@type": "Brand", "name": "ZEEKR"},
         "parentOrganization": {"@type": "Organization", "name": "Santa Rosa Paraguay"},
         "areaServed": {"@type": "Country", "name": "Paraguay"},
-        "telephone": PHONES[0][2],
-        "contactPoint": contact_points(),
-        "sameAs": [s["url"] for s in setting("social", SOCIAL_DEFAULT) if s["network"] in ("instagram", "facebook", "tiktok", "youtube")] + ["https://www.zeekrlife.com/"],
     }
+    if sales:
+        o["telephone"] = sales[2]
+        o["contactPoint"] = contact_points()
+    o["sameAs"] = [s["url"] for s in setting("social", SOCIAL_DEFAULT) if s["network"] in ("instagram", "facebook", "tiktok", "youtube")] + ["https://www.zeekrlife.com/"]
+    return o
 
 
 def website():
@@ -1063,8 +1086,14 @@ def hero_slider():
     slides, dots = [], []
     slides_src = HERO_SLIDES or [{"model": k, "image_desktop": MODELS[k]["hero_desktop"], "image_mobile": MODELS[k]["hero_mobile"], "eyebrow": MODELS[k]["eyebrow"], "title": MODELS[k]["name"],
                                   "claim": MODELS[k]["claim"], "cta_primary_label": "Conocé el {model}", "cta_primary_url": "", "cta_secondary_intent": "test-drive"} for k in MODEL_ORDER]
-    n = len(slides_src)
-    for i, sl in enumerate(slides_src):
+    valid = []
+    for sl in slides_src:
+        if sl.get("cta_primary_url") or sl.get("model") in MODELS:
+            valid.append(sl)
+        else:
+            print("⚠ hero: diapositiva sin modelo válido ni enlace, se omite:", sl.get("title", ""))
+    n = len(valid)
+    for i, sl in enumerate(valid):
         first = i == 0
         href = sl.get("cta_primary_url") or url_model(sl["model"])
         pic = picture(sl["image_desktop"], f"{sl['title']} — {_(sl['claim'])}", (1200, 1800, 2400), sizes="100vw",
@@ -1109,8 +1138,8 @@ def brand_statement():
 <section class="statement" aria-labelledby="stTitle">
   <div class="statement-inner reveal">
     {eyebrow("ZEEKR Paraguay")}
-    <h1 id="stTitle">{_(setting("statement_title", "Vehículos eléctricos premium que reimaginan la forma de moverse."))}</h1>
-    <p>{_(setting("statement_text", "Diseño escandinavo, tecnología de vanguardia y el respaldo del Grupo Geely. ZEEKR llega a Paraguay de la mano de Santa Rosa Paraguay, con los modelos 001, X y 7X."))}</p>
+    <h1 id="stTitle">{_(setting("statement_title", STATEMENT_TITLE))}</h1>
+    <p>{_(setting("statement_text", STATEMENT_TEXT))}</p>
     <a class="text-link" href="{url_section('nosotros')}">{_("Conocé la marca")} {ICON_ARROW}</a>
   </div>
 </section>'''
@@ -1142,7 +1171,9 @@ def model_card(key, heading="h2"):
 
 
 def tech_strip():
-    items = [(i["title"], i["text"]) for i in setting("tech_items", [])] or TECH_ITEMS
+    items = TECH_ITEMS if SETTINGS is None else [(i["title"], i["text"]) for i in SETTINGS.get("tech_items", [])]
+    if not items:   # el panel puede vaciar la lista para ocultar la franja
+        return ""
     lis = "".join(f'<li class="tech-item reveal"><h3>{_(h)}</h3><p>{_(p)}</p></li>' for h, p in items)
     return f'''
 <section class="section tech" aria-labelledby="techTitle">
@@ -1181,8 +1212,8 @@ def build_index():
             {"@type": "ListItem", "position": i + 1, "name": MODELS[k]["name"], "url": DOMAIN + url_model(k)} for i, k in enumerate(MODEL_ORDER)]},
         faq_schema(HOME_FAQ),
     )
-    render_page(url_home(), _(setting("seo_title", "ZEEKR Paraguay | Vehículos eléctricos premium: 7X, X y 001")),
-                _(setting("seo_description", "Vehículos eléctricos premium ZEEKR en Paraguay: ZEEKR 7X, X y 001. Diseño escandinavo, tecnología líder y autonomía real. Agendá tu prueba de manejo.")),
+    render_page(url_home(), _(setting("seo_title", SEO_TITLE)),
+                _(setting("seo_description", SEO_DESCRIPTION)),
                 content, "", jsonld, og, preload=_derivative(hd, 1800, "webp", False)[0], body_cls="page-home has-hero",
                 preload_mobile=[_derivative(hm, w, "webp", False) for w in (480, 780)] if hm else None, alts=alts)
 
@@ -1288,6 +1319,9 @@ def page_model(key):
     url = url_model(key)
     content = model_hero(m, image=m["page_hero"], mobile=m.get("page_hero_mobile"))
     for s in m["sections"]:
+        if s.get("type") not in SECTION_RENDERERS:
+            print("⚠ ficha", key, "- sección de tipo desconocido, se omite:", s.get("type", ""))
+            continue
         content += SECTION_RENDERERS[s["type"]](s)
     if m["versions"]:
         content += sec_compare("Versiones", m["versions_title"], [(v["name"], v.get("subtitle") or None, [(r["k"], r["v"]) for r in v["rows"]]) for v in m["versions"]])
@@ -1540,7 +1574,8 @@ def main():
     for lang in LANGS:
         build_lang(lang)
     build_meta()
-    cleanup()
+    if not CLI.no_cleanup:
+        cleanup()
     for lang, miss in MISSING.items():
         if miss:
             print(f"\n⚠ {lang}: {len(miss)} textos sin traducción (se usó español). Ver i18n_missing_{lang}.txt")

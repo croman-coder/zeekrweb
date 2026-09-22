@@ -1,9 +1,16 @@
-# scripts/export_content.py — vuelca los literales actuales de build_site.py a content/zeekr.json (seed y paridad).
+# scripts/export_content.py — vuelca los literales actuales de build_site.py a un content.json (seed y paridad).
+import argparse
 import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_ap = argparse.ArgumentParser(description="Exporta los literales de build_site.py a un content.json")
+_ap.add_argument("--out", default=os.path.join(ROOT, "content", "zeekr.json"), help="destino del JSON (default: content/zeekr.json)")
+ARGS = _ap.parse_args()
+ARGS.out = os.path.abspath(ARGS.out)   # build_site hace chdir(ROOT) al importarse
+
+sys.path.insert(0, ROOT)
 import build_site as b  # noqa: E402
 from i18n import TRANSLATIONS  # noqa: E402
 
@@ -34,16 +41,16 @@ content = {
     "site": {"name": b.SITE_NAME, "slug": "zeekr", "domain": b.DOMAIN, "ga_id": b.GA_ID, "whatsapp": b.WA_NUMBER, "languages": list(b.LANGS)},
     "settings": {
         "phones": [{"kind": k, "display": d, "e164": e} for k, d, e in b.PHONES],
-        "social": [{"network": "instagram", "url": "https://www.instagram.com/zeekrparaguay/"}, {"network": "linkedin", "url": "https://www.linkedin.com/company/zeekr"}],
-        "header_menu": [{"label": "Modelos", "target": "modelos", "url": ""}, {"label": "Nosotros", "target": "nosotros", "url": ""}, {"label": "Noticias", "target": "noticias", "url": ""}],
-        "statement_title": "Vehículos eléctricos premium que reimaginan la forma de moverse.",
-        "statement_text": "Diseño escandinavo, tecnología de vanguardia y el respaldo del Grupo Geely. ZEEKR llega a Paraguay de la mano de Santa Rosa Paraguay, con los modelos 001, X y 7X.",
-        "footer_tagline": "Distribuidor oficial ZEEKR en Paraguay.",
-        "cookie_text": "Cuando visitás nuestro sitio web (“Plataformas ZEEKR”), utilizamos cookies y otras tecnologías de seguimiento similares para mejorar la funcionalidad de las Plataformas ZEEKR, el rendimiento, medir el tráfico del sitio web, analizar el comportamiento del usuario y ajustar nuestro contenido y servicios. Si hacés clic en “Aceptar todo” nos autorizás a procesar tus datos personales para tales fines. Si hacés clic en “Rechazar todo” solo utilizaremos cookies y tecnologías estrictamente necesarias para la funcionalidad de la Plataforma ZEEKR. Para más información o para consentir cookies específicas, hacé clic en “Configuración de cookies”.",
-        "legal_disclaimer": "Toda la información contenida en este material está basada en datos disponibles al momento de su publicación. Las fotos y pantallas son de carácter ilustrativo y de referencia. Los datos de autonomía y prestaciones se basan en ciclos de prueba (WLTP / pruebas de ingeniería) y pueden variar según clima, camino, carga, batería y configuración del vehículo.",
-        "org_description": "Distribuidor oficial de ZEEKR en Paraguay: vehículos eléctricos premium ZEEKR 001, ZEEKR X y ZEEKR 7X.",
-        "seo_title": "ZEEKR Paraguay | Vehículos eléctricos premium: 7X, X y 001",
-        "seo_description": "Vehículos eléctricos premium ZEEKR en Paraguay: ZEEKR 7X, X y 001. Diseño escandinavo, tecnología líder y autonomía real. Agendá tu prueba de manejo.",
+        "social": b.SOCIAL_DEFAULT,
+        "header_menu": b.HEADER_MENU_DEFAULT,
+        "statement_title": b.STATEMENT_TITLE,
+        "statement_text": b.STATEMENT_TEXT,
+        "footer_tagline": b.FOOTER_TAGLINE,
+        "cookie_text": b.COOKIE_TEXT,
+        "legal_disclaimer": b.LEGAL_DISCLAIMER,
+        "org_description": b.ORG_DESCRIPTION,
+        "seo_title": b.SEO_TITLE,
+        "seo_description": b.SEO_DESCRIPTION,
         "tech_items": [{"title": t, "text": x} for t, x in b.TECH_ITEMS],
         "home_faq": [{"q": q, "a": a} for q, a in b.HOME_FAQ],
     },
@@ -53,7 +60,6 @@ content = {
     "news": [news(n) for n in b.NEWS],
     "translations": {lang: dict(TRANSLATIONS[lang]) for lang in ("en", "pt", "zh")},
 }
-os.makedirs(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "content"), exist_ok=True)
-out = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "content", "zeekr.json")
-json.dump(content, open(out, "w"), ensure_ascii=False, indent=1)
-print(out, ":", len(content["models"]), "modelos,", len(content["news"]), "noticias")
+os.makedirs(os.path.dirname(ARGS.out), exist_ok=True)
+json.dump(content, open(ARGS.out, "w"), ensure_ascii=False, indent=1)
+print(ARGS.out, ":", len(content["models"]), "modelos,", len(content["news"]), "noticias")
