@@ -61,9 +61,14 @@ def fetch_content(dx, site_id, drafts):
         return json.dumps({"_and": [{"site": {"_eq": site_id}}, extra]})
 
     site = dx.get(f"/items/sites/{site_id}")
-    st = dx.items("site_settings", fields="*,translations.*", filter=json.dumps({"site": {"_eq": site_id}}))
+    st = dx.items("site_settings", fields="*,translations.*", filter=f(status_filter(drafts)), sort="id")
     if not st:
+        any_st = dx.items("site_settings", fields="id", filter=json.dumps({"site": {"_eq": site_id}}))
+        if any_st:
+            raise LookupError("La configuración del sitio está en borrador: publicala (estado = Publicado) para poder publicar el sitio")
         raise LookupError("el sitio no tiene site_settings")
+    if len(st) > 1:
+        print(f"⚠ hay {len(st)} filas de configuración para este sitio; se usó la de id {st[0]['id']}")
     return {"site": site, "settings": st[0],
             "hero_slides": dx.items("hero_slides", fields="*,translations.*,image_desktop.*,image_mobile.*", filter=f(status_filter(drafts)), sort="sort"),
             "models": dx.items("models", fields=MODEL_FIELDS, filter=f(status_filter(drafts)), sort="sort"),
@@ -92,7 +97,7 @@ def sync_files(dx, raw, workspace, log=print):
         seen.add(rel)
         dest = Path(workspace) / rel
         size = int(f.get("filesize") or 0)
-        if dest.exists() and (size == 0 or dest.stat().st_size == size):
+        if size and dest.exists() and dest.stat().st_size == size:
             continue
         dx.download(f["id"], dest)
         n += 1

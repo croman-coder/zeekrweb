@@ -1,6 +1,7 @@
 import json
 
 import httpx
+import pytest
 
 from builder import directus_client as D
 
@@ -37,6 +38,59 @@ def test_fetch_site():
     assert site["slug"] == "zeekr" and st == {"id": 7, "phones": []}
 
 
+def test_fetch_content_site_settings_filtered_and_sorted():
+    seen = {}
+
+    def handler(req):
+        seen[req.url.path] = dict(req.url.params)
+        data = {"/items/sites/1": {"id": 1, "slug": "zeekr"}, "/items/site_settings": [{"id": 1, "translations": []}],
+                "/items/models": [], "/items/hero_slides": [], "/items/news": []}[req.url.path]
+        return httpx.Response(200, json={"data": data})
+
+    D.fetch_content(make(handler), 1, drafts=False)
+    f = json.loads(seen["/items/site_settings"]["filter"])
+    assert f == {"_and": [{"site": {"_eq": 1}}, {"status": {"_eq": "published"}}]}
+    assert seen["/items/site_settings"]["sort"] == "id"
+
+
+def test_fetch_content_site_settings_draft_only_raises_actionable_error():
+    def handler(req):
+        if req.url.path == "/items/sites/1":
+            return httpx.Response(200, json={"data": {"id": 1, "slug": "zeekr"}})
+        assert req.url.path == "/items/site_settings"
+        filt = json.loads(req.url.params["filter"])
+        if "_and" in filt:                                            # filtrada por status (published) → vacía
+            return httpx.Response(200, json={"data": []})
+        return httpx.Response(200, json={"data": [{"id": 5}]})         # solo por site → existe (draft)
+
+    with pytest.raises(LookupError, match="borrador"):
+        D.fetch_content(make(handler), 1, drafts=False)
+
+
+def test_fetch_content_site_settings_none_at_all_raises_original_error():
+    def handler(req):
+        if req.url.path == "/items/sites/1":
+            return httpx.Response(200, json={"data": {"id": 1, "slug": "zeekr"}})
+        assert req.url.path == "/items/site_settings"
+        return httpx.Response(200, json={"data": []})                 # ninguna fila, con o sin filtro de status
+
+    with pytest.raises(LookupError, match="el sitio no tiene site_settings"):
+        D.fetch_content(make(handler), 1, drafts=False)
+
+
+def test_fetch_content_site_settings_multiple_warns_and_uses_first(capsys):
+    def handler(req):
+        data = {"/items/sites/1": {"id": 1, "slug": "zeekr"},
+                "/items/site_settings": [{"id": 3, "translations": []}, {"id": 9, "translations": []}],
+                "/items/models": [], "/items/hero_slides": [], "/items/news": []}[req.url.path]
+        return httpx.Response(200, json={"data": data})
+
+    raw = D.fetch_content(make(handler), 1, drafts=False)
+    assert raw["settings"]["id"] == 3
+    out = capsys.readouterr().out
+    assert "2" in out and "id 3" in out
+
+
 def test_sync_files_downloads_once_and_skips_same_size(tmp_path):
     calls = []
 
@@ -54,11 +108,32 @@ def test_sync_files_downloads_once_and_skips_same_size(tmp_path):
     assert D.sync_files(make(handler), raw, tmp_path, log=lambda m: None) == 1
 
 
+def test_sync_files_redownloads_when_filesize_falsy(tmp_path):
+    calls = []
+
+    def handler(req):
+        calls.append(req.url.path)
+        return httpx.Response(200, content=b"xxxxx")
+
+    f = {"id": "ghi", "filename_download": "c.jpg", "filesize": 0}    # Directus todavía no completó filesize
+    raw = {"models": [{"hero_image": f}]}
+    assert D.sync_files(make(handler), raw, tmp_path, log=lambda m: None) == 1
+    assert calls == ["/assets/ghi"]
+    # sin un filesize confiable no hay forma segura de detectar "sin cambios" -> se vuelve a bajar siempre
+    assert D.sync_files(make(handler), raw, tmp_path, log=lambda m: None) == 1
+    assert calls == ["/assets/ghi", "/assets/ghi"]
+
+
 def test_create_update():
     def handler(req):
         body = json.loads(req.content)
         if req.method == "POST":
+            assert req.url.path == "/items/builds"
+            assert body == {"mode": "publish"}
             return httpx.Response(200, json={"data": {"id": 3, **body}})
+        assert req.method == "PATCH"
+        assert req.url.path == "/items/builds/3"
+        assert body == {"status": "success"}
         return httpx.Response(200, json={"data": {"id": 3, **body}})
 
     dx = make(handler)
