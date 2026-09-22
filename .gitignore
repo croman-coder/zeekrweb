@@ -4,3 +4,6 @@ www_zeekrlife_com_py.html
 .git
 .claude/
 .superpowers/
+builder/.venv/
+.pytest_cache/
+__pycache__/
