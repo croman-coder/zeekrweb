@@ -72,8 +72,11 @@ def generate(ws, content, log):
 
 
 def _build(settings, dx, site, mode, claude, log):
-    ws = Path(settings.sites_root) / site["slug"] / "workspace"
-    log("preparando workspace")
+    # Un workspace por modo: el árbol es acumulativo (el generador no borra lo que ya no genera salvo en
+    # su cleanup), así que con un workspace compartido una página en borrador previsualizada terminaba
+    # rsyncheada dentro de la siguiente publicación. `rollback` no usa workspace.
+    ws = Path(settings.sites_root) / site["slug"] / "workspace" / mode
+    log(f"preparando workspace ({mode})")
     prepare_workspace(settings.repo_dir, ws)
     log("bajando contenido")
     raw = fetch_content(dx, site["id"], drafts=(mode == "preview"))
@@ -95,7 +98,7 @@ def _snapshot(rel, content):
     (rel.parent / f"{rel.name}.content.json").write_text(json.dumps(content, ensure_ascii=False))
 
 
-def _prune(settings, slug, log):
+def _prune(settings, slug):
     removed = publish.prune(settings.sites_root, slug, keep=settings.keep_releases)
     for p in removed:                        # el snapshot vive fuera del directorio de la release: hay que borrarlo aparte
         (p.parent / f"{p.name}.content.json").unlink(missing_ok=True)
@@ -109,12 +112,12 @@ def run(job, settings, dx=None, claude=None, log=None):
     mode, user, sid = job.get("mode"), job.get("user") or "", job["site_settings_id"]
     try:
         site, _st = fetch_site(dx, sid)
-    except (LookupError, httpx.HTTPError) as e:
+        slug = site["slug"]      # si el m2o `site` vino en null, site es None: también es un error de build
+    except (LookupError, httpx.HTTPError, TypeError, KeyError) as e:
         # Directus 11 responde 403 (no 404) cuando el id no existe o el token no lo alcanza → puede ser HTTPStatusError.
-        log(f"ERROR no se pudo leer la configuración del sitio #{sid}: {e}")
+        log(f"ERROR no se pudo leer la configuración del sitio #{sid}: {e!r}")
         return dx.create("builds", {"site": None, "mode": mode, "status": "error", "requested_by": user,
                                     "started_at": now(), "finished_at": now(), "log": log.text()})
-    slug = site["slug"]
     build = dx.create("builds", {"site": site["id"], "mode": mode, "status": "queued", "requested_by": user, "started_at": now()})
     with site_lock(slug):
         dx.update("builds", build["id"], {"status": "running"})
@@ -134,12 +137,27 @@ def run(job, settings, dx=None, claude=None, log=None):
                 _snapshot(rel, content)
                 link = "current" if mode == "publish" else "preview"
                 publish.switch(settings.sites_root, slug, link, rel)
-                log(f"{link} → {rel.name}; releases limpiadas: {len(_prune(settings, slug, log))}")
+                log(f"{link} → {rel.name}; releases limpiadas: {len(_prune(settings, slug))}")
                 result = {"release": rel.name, "preview_url": site.get("preview_host") if mode == "preview" else site.get("domain")}
             return dx.update("builds", build["id"], {"status": "success", "finished_at": now(), "log": log.text(), **result})
         except Exception as e:  # noqa: BLE001 — cualquier error deja la release anterior intacta
             log("ERROR " + "".join(traceback.format_exception_only(type(e), e)).strip())
             return dx.update("builds", build["id"], {"status": "error", "finished_at": now(), "log": log.text()})
+
+
+STALE_MSG = ("El builder se reinició mientras este build estaba en curso, así que quedó a medias y no se "
+             "publicó nada. El sitio sigue en la versión anterior: volvé a intentar.")
+
+
+def reap_stale_builds(dx, log=print):
+    """Al arrancar: una fila en `queued`/`running` es de un proceso que murió (deploy, reinicio, OOM).
+    Nadie la va a terminar nunca, así que se cierra como error para que el editor no vea un spinner eterno."""
+    stale = dx.items("builds", fields="id,mode", filter=json.dumps({"status": {"_in": ["queued", "running"]}}))
+    for b in stale:
+        dx.update("builds", b["id"], {"status": "error", "finished_at": now(), "log": STALE_MSG})
+    if stale:
+        log(f"builds que quedaron colgados de un reinicio y se cerraron como error: {[b['id'] for b in stale]}")
+    return len(stale)
 
 
 def dry_run(settings, site_settings_id, mode):

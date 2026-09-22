@@ -88,7 +88,8 @@ def iter_files(obj):
 
 
 def sync_files(dx, raw, workspace, log=print):
-    """Baja a <workspace>/images/cms/ los originales que faltan (o cambiaron de tamaño). Devuelve cuántos bajó."""
+    """Baja a <workspace>/images/cms/ los originales que faltan (o cambiaron de tamaño) y borra los que el
+    contenido de esta corrida ya no referencia. Devuelve cuántos bajó."""
     n, seen = 0, set()
     for f in iter_files(raw):
         rel = file_path(f)
@@ -102,4 +103,20 @@ def sync_files(dx, raw, workspace, log=print):
         dx.download(f["id"], dest)
         n += 1
         log(f"  ↓ {f.get('filename_download')} → {rel}")
+    prune_files(workspace, seen, log)
     return n
+
+
+def prune_files(workspace, keep, log=print):
+    """Borra de images/cms/ los originales que ya no están en el contenido: si no, un archivo borrado del
+    CMS sigue descargable en el dominio y se arrastra a todas las releases siguientes."""
+    cms = Path(workspace) / "images" / "cms"
+    if not cms.is_dir():
+        return []
+    removed = []
+    for p in sorted(cms.iterdir()):
+        if p.is_file() and p.suffix != ".part" and f"images/cms/{p.name}" not in keep:
+            p.unlink()
+            removed.append(p.name)
+            log(f"  ✗ ya no está en el CMS: images/cms/{p.name}")
+    return removed

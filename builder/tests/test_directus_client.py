@@ -124,6 +124,28 @@ def test_sync_files_redownloads_when_filesize_falsy(tmp_path):
     assert calls == ["/assets/ghi", "/assets/ghi"]
 
 
+def test_sync_files_prunes_files_no_longer_referenced(tmp_path):
+    """Un original borrado del CMS no puede seguir vivo en images/cms/ (ni arrastrado a cada release)."""
+    def handler(req):
+        return httpx.Response(200, content=b"12345")
+
+    f = {"id": "abc", "filename_download": "a.jpg", "filesize": 5}
+    raw = {"models": [{"hero_image": f}]}
+    D.sync_files(make(handler), raw, tmp_path, log=lambda m: None)
+    viejo = tmp_path / "images/cms/zzz.jpg"                      # de una corrida anterior, ya no referenciado
+    viejo.write_bytes(b"viejo")
+    (tmp_path / "images/cms/sub").mkdir()                        # una carpeta no es un original suelto: no se toca
+    msgs = []
+    assert D.sync_files(make(handler), raw, tmp_path, log=msgs.append) == 0
+    assert (tmp_path / "images/cms/abc.jpg").exists() and not viejo.exists()
+    assert (tmp_path / "images/cms/sub").is_dir()
+    assert any("zzz.jpg" in m for m in msgs)
+
+
+def test_sync_files_without_images_cms_dir_does_not_fail(tmp_path):
+    assert D.sync_files(make(lambda req: httpx.Response(200, content=b"")), {"models": []}, tmp_path, log=lambda m: None) == 0
+
+
 def test_create_update():
     def handler(req):
         body = json.loads(req.content)

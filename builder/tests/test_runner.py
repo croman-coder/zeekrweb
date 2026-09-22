@@ -5,6 +5,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from builder import build_runner as R
@@ -100,6 +101,66 @@ def test_rollback_without_previous_is_error(tmp_path, monkeypatch):
     assert row["status"] == "error" and "anterior" in row["log"]
 
 
+def test_a_previewed_draft_page_never_reaches_the_published_release(tmp_path, monkeypatch):
+    """Agujero real: con un workspace único, previsualizar un borrador dejaba su HTML ahí y el siguiente
+    publish lo rsynceaba al dominio real. Preview y publish tienen que usar workspaces separados."""
+    s, dx = settings(tmp_path), FakeDx()
+    patch_steps(monkeypatch)
+
+    def generate(ws, content, log):
+        Path(ws, "index.html").write_text("ok")
+        if content["drafts"]:                                   # el modelo en borrador solo existe en preview
+            Path(ws, "modelos", "zeekr-9x").mkdir(parents=True, exist_ok=True)
+            Path(ws, "modelos", "zeekr-9x", "index.html").write_text("BORRADOR 9X")
+    monkeypatch.setattr(R, "generate", generate)
+
+    R.run({"site_settings_id": 1, "mode": "preview"}, s, dx=dx, log=R.Log())
+    prev = P.target(Path(s.sites_root) / "zeekr" / "preview")
+    assert (prev / "modelos" / "zeekr-9x" / "index.html").exists()      # en la preview sí tiene que estar
+    row = R.run({"site_settings_id": 1, "mode": "publish"}, s, dx=dx, log=R.Log())
+    cur = P.target(Path(s.sites_root) / "zeekr" / "current")
+    assert row["status"] == "success"
+    assert not (cur / "modelos" / "zeekr-9x").exists(), "el borrador previsualizado se publicó"
+
+
+def test_preview_and_publish_use_separate_workspaces(tmp_path, monkeypatch):
+    s, dx = settings(tmp_path), FakeDx()
+    patch_steps(monkeypatch)
+    seen = []
+    monkeypatch.setattr(R, "generate", lambda ws, content, log: (seen.append(str(ws)), Path(ws, "index.html").write_text("x")))
+    R.run({"site_settings_id": 1, "mode": "publish"}, s, dx=dx, log=R.Log())
+    R.run({"site_settings_id": 1, "mode": "preview"}, s, dx=dx, log=R.Log())
+    base = Path(s.sites_root) / "zeekr" / "workspace"
+    assert seen == [str(base / "publish"), str(base / "preview")]
+
+
+def test_unknown_mode_is_a_failed_build(tmp_path, monkeypatch):
+    s, dx = settings(tmp_path), FakeDx()
+    patch_steps(monkeypatch)
+    row = R.run({"site_settings_id": 1, "mode": "loco"}, s, dx=dx, log=R.Log())
+    assert row["status"] == "error" and "loco" in row["log"]
+    assert not (Path(s.sites_root) / "zeekr" / "current").exists()
+
+
+def test_site_without_slug_is_a_failed_build(tmp_path, monkeypatch):
+    """Si el m2o `site` viene en null, fetch_site devuelve site=None: tiene que quedar fila, no reventar."""
+    s, dx = settings(tmp_path), FakeDx()
+    monkeypatch.setattr(R, "fetch_site", lambda dx_, i: (None, {"id": i}))
+    row = R.run({"site_settings_id": 1, "mode": "publish"}, s, dx=dx, log=R.Log())
+    assert row["status"] == "error" and row["site"] is None and "configuración del sitio" in row["log"]
+
+
+def test_reap_stale_builds_closes_rows_left_running(tmp_path):
+    dx = FakeDx()
+    dx.create("builds", {"status": "running", "mode": "publish"})
+    dx.create("builds", {"status": "queued", "mode": "preview"})
+    dx.create("builds", {"status": "success", "mode": "publish"})
+    dx.items = lambda coll, **p: [dict(r) for r in dx.rows.values() if r["status"] in ("queued", "running")]
+    assert R.reap_stale_builds(dx, log=lambda m: None) == 2
+    assert [r["status"] for r in dx.rows.values()] == ["error", "error", "success"]
+    assert "reinició" in dx.rows[1]["log"]
+
+
 def test_api_auth_and_queue(monkeypatch):
     from builder import app as A
     monkeypatch.setattr(A, "settings", Settings(builder_token="secreto"))
@@ -114,6 +175,41 @@ def test_api_auth_and_queue(monkeypatch):
     assert r.status_code == 202 and ran[-1] == {"site_settings_id": 1, "mode": "preview", "user": "abc"}
     r = c.post("/rollback", json={"site_settings_id": 1}, headers={"X-Builder-Token": "secreto"})
     assert r.status_code == 202 and ran[-1]["mode"] == "rollback"
+
+
+def test_api_rejects_everything_when_builder_token_is_empty(monkeypatch):
+    """Sin BUILDER_TOKEN configurado la API no puede quedar abierta."""
+    from builder import app as A
+    monkeypatch.setattr(A, "settings", Settings(builder_token=""))
+    c = TestClient(A.app)
+    assert c.post("/build", json={"site_settings_id": 1, "mode": "publish"}).status_code == 401
+    assert c.post("/build", json={"site_settings_id": 1, "mode": "publish"}, headers={"X-Builder-Token": ""}).status_code == 401
+    assert c.post("/rollback", json={"site_settings_id": 1}, headers={"X-Builder-Token": "lo-que-sea"}).status_code == 401
+
+
+def test_non_ascii_builder_token_gives_401_and_not_500(monkeypatch):
+    """Si alguien configura BUILDER_TOKEN con acentos, hmac.compare_digest sobre str levanta TypeError y
+    la API contesta 500 a todo. Comparando en bytes contesta 401, que es lo correcto."""
+    from builder import app as A
+    monkeypatch.setattr(A, "settings", Settings(builder_token="contraseña"))
+    c = TestClient(A.app)
+    assert c.post("/build", json={"site_settings_id": 1, "mode": "publish"}, headers={"X-Builder-Token": "otra"}).status_code == 401
+    with pytest.raises(HTTPException):          # nunca TypeError
+        A.check("otra")
+    A.check("contraseña")                       # el token correcto pasa (los headers HTTP no viajan con no-ASCII)
+
+
+def test_health_does_not_mix_data_from_the_previous_build(monkeypatch):
+    from builder import app as A
+    monkeypatch.setattr(A, "settings", Settings(builder_token="secreto"))
+    monkeypatch.setattr(A.build_runner, "run", lambda job, settings: {"id": 1, "mode": "publish", "status": "success", "release": "20260101-000000", "finished_at": "x"})
+    c = TestClient(A.app)
+    c.post("/build", json={"site_settings_id": 1, "mode": "publish"}, headers={"X-Builder-Token": "secreto"})
+    assert c.get("/health").json()["last"]["release"] == "20260101-000000"
+    monkeypatch.setattr(A.build_runner, "run", lambda job, settings: {"id": 2, "mode": "publish", "status": "error", "finished_at": "y"})
+    c.post("/build", json={"site_settings_id": 1, "mode": "publish"}, headers={"X-Builder-Token": "secreto"})
+    last = c.get("/health").json()["last"]
+    assert last["status"] == "error" and last["release"] is None      # no arrastra la release del build anterior
 
 
 # ── errores heredados de las tareas 5-6: el runner los deja en la fila `builds`, no revienta ──────────────

@@ -72,6 +72,7 @@ LANGS = {
 L = "es"                     # idioma en construcción
 MISSING = {k: set() for k in LANGS}
 PAGES = []                   # (path, lastmod, alternates) para el sitemap
+HTML_PAGES = set()           # archivos HTML escritos en esta corrida (para purgar páginas que ya no existen)
 
 
 def _(s):
@@ -169,17 +170,19 @@ def _derivative(src, width, fmt, alpha):
     GENERATED.add(out)
     if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(src):
         os.makedirs(os.path.dirname(out), exist_ok=True)
+        tmp = out + ".part"          # si el proceso muere a mitad, el derivado a medias no queda con nombre final
         with Image.open(src) as im:
             im = ImageOps.exif_transpose(im)
             im = im.convert("RGBA" if alpha else "RGB")
             if im.width != width:
                 im = im.resize((width, height), Image.LANCZOS)
             if fmt == "webp":
-                im.save(out, "WEBP", quality=82, method=6)
+                im.save(tmp, "WEBP", quality=82, method=6)
             elif fmt == "png":
-                im.save(out, "PNG", optimize=True)
+                im.save(tmp, "PNG", optimize=True)
             else:
-                im.save(out, "JPEG", quality=82, optimize=True, progressive=True)
+                im.save(tmp, "JPEG", quality=82, optimize=True, progressive=True)
+        os.replace(tmp, out)
     return "/" + out, width, height
 
 
@@ -213,10 +216,12 @@ def og_image(src, name, pos=(0.5, 0.5)):
     GENERATED.add(out)
     if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(src):
         os.makedirs(os.path.dirname(out), exist_ok=True)
+        tmp = out + ".part"          # ídem _derivative: rename atómico para no dejar un JPEG truncado
         with Image.open(src) as im:
             im = ImageOps.exif_transpose(im).convert("RGB")
             im = ImageOps.fit(im, (1200, 630), Image.LANCZOS, centering=pos)
-            im.save(out, "JPEG", quality=84, optimize=True, progressive=True)
+            im.save(tmp, "JPEG", quality=84, optimize=True, progressive=True)
+        os.replace(tmp, out)
     return "/" + out
 
 
@@ -967,6 +972,7 @@ def render_page(path, title, desc, content, nav_active, jsonld, og_img, preload=
 '''
     with open(out, "w") as fh:
         fh.write(html)
+    HTML_PAGES.add(out)
     if not path.endswith("404.html"):
         PAGES.append((path, lastmod or TODAY, alts or {}))
     print("OK", out)
@@ -1541,11 +1547,33 @@ def build_meta():
     print("OK sitemap.xml robots.txt _redirects _headers llms.txt")
 
 
+def cleanup_html():
+    """Borra las páginas que quedaron de una corrida anterior: un modelo o una noticia que se despublicó
+    o se borró del CMS, o un borrador que alguien previsualizó. Sin esto el árbol es acumulativo y esas
+    páginas siguen respondiendo 200 para siempre.
+
+    Solo mira las secciones que escribe el generador: las carpetas de primer nivel donde puso alguna página
+    en esta corrida (modelos/, noticias/, nosotros/, en/, pt/, zh/). Nunca toca css/, js/, fonts/, icons/,
+    images/ ni los archivos meta, porque ahí el generador no escribe ningún index.html."""
+    roots = sorted({p.split(os.sep)[0] for p in HTML_PAGES if os.sep in p})
+    for root in roots:
+        for dirpath, _dirs, files in os.walk(root, topdown=False):
+            for f in files:
+                path = os.path.join(dirpath, f)
+                if f == "index.html" and path not in HTML_PAGES:
+                    os.remove(path)
+                    print("rm", path)
+            if dirpath != root and not os.listdir(dirpath):
+                os.rmdir(dirpath)
+                print("rmdir", dirpath)
+
+
 def cleanup():
     for f in ["zeekr001.html", "zeekrx.html", "zeekr7x.html", "noticias.html", "nosotros.html"]:
         if os.path.exists(f):
             os.remove(f)
             print("rm", f)
+    cleanup_html()
     for root, _dirs, files in os.walk(OPT_DIR):
         for f in files:
             path = os.path.join(root, f)

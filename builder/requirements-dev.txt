@@ -1,0 +1,3 @@
+# Solo para correr los tests (builder/.venv). La imagen de producción instala requirements.txt a secas.
+-r requirements.txt
+pytest~=8.3
