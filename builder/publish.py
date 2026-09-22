@@ -21,24 +21,52 @@ def target(link):
 
 def releases(root, slug, kind="publish"):
     rel = site_dir(root, slug) / "releases"
-    return sorted(p.resolve() for p in rel.iterdir() if p.is_dir() and p.name.endswith("-preview") == (kind == "preview"))
+    return sorted(
+        p.resolve()
+        for p in rel.iterdir()
+        if p.is_dir() and not p.name.startswith(".") and p.name.endswith("-preview") == (kind == "preview")
+    )
 
 
 def new_release(root, slug, workspace, kind="publish"):
-    """Copia el workspace a releases/<ts>[-preview] con rsync; los archivos sin cambios se hardlinkean a `current`."""
+    """Copia el workspace a un staging (releases/.tmp-<ts>[-preview]) con rsync y, si termina bien, lo
+    renombra de forma atómica a releases/<ts>[-preview]; los archivos sin cambios se hardlinkean a `current`.
+    Si rsync falla (o el proceso muere a mitad de la copia) no queda ninguna entrada visible en `releases()`:
+    el nombre final solo existe una vez que la copia terminó completa."""
     site = site_dir(root, slug)
+    rel_dir = site / "releases"
+
+    for p in rel_dir.iterdir():                # stagings huérfanos (de una corrida anterior que murió a mitad)
+        if p.is_dir() and p.name.startswith(".tmp-"):
+            print(f"new_release: borrando staging huérfano {p}")
+            shutil.rmtree(p, ignore_errors=True)
+
     suffix = "-preview" if kind == "preview" else ""
-    dest = site / "releases" / (time.strftime("%Y%m%d-%H%M%S") + suffix)
+    name = time.strftime("%Y%m%d-%H%M%S") + suffix
+    dest = rel_dir / name
     while dest.exists():                       # dos builds en el mismo segundo: esperar al siguiente
         time.sleep(0.25)
-        dest = site / "releases" / (time.strftime("%Y%m%d-%H%M%S") + suffix)
+        name = time.strftime("%Y%m%d-%H%M%S") + suffix
+        dest = rel_dir / name
+    staging = rel_dir / (".tmp-" + name)
+
     # -c: compara por contenido (no por mtime/tamaño) para que un archivo regenerado igual se hardlinkee y uno distinto nunca se confunda
     cmd = ["rsync", "-a", "-c", "--delete", *[f"--exclude={e}" for e in EXCLUDE]]
     base = target(site / "current")
     if base:
         cmd.append(f"--link-dest={base}")
-    cmd += [f"{Path(workspace)}/", f"{dest}/"]
-    subprocess.run(cmd, check=True, capture_output=True, text=True)
+    cmd += [f"{Path(workspace)}/", f"{staging}/"]
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise RuntimeError("rsync falló al crear la release:\n" + (e.stderr or "")[-2000:]) from e
+    except Exception:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+
+    os.replace(staging, dest)                  # rename atómico: recién acá la release pasa a existir para releases()
     return dest.resolve()
 
 
