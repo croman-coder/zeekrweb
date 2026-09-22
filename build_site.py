@@ -20,6 +20,7 @@ imágenes Open Graph en images/_opt/og/, íconos, sitemap, robots, _redirects/_h
 
 Ejecutar: python3 build_site.py
 """
+import argparse
 import datetime as _dt
 import hashlib
 import json
@@ -32,6 +33,13 @@ from PIL import Image, ImageDraw, ImageFile, ImageOps
 from i18n import TRANSLATIONS
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+# --- CLI: con --content los datos salen de un content.json; sin él, de los literales de abajo
+_ap = argparse.ArgumentParser(description="Genera el sitio estático ZEEKR")
+_ap.add_argument("--content", help="content.json (si se omite, usa los literales del código)")
+CLI = _ap.parse_args() if __name__ == "__main__" else _ap.parse_args([])
+if CLI.content:
+    CLI.content = os.path.abspath(CLI.content)   # más abajo hacemos chdir a ROOT
 
 DOMAIN = "https://zeekrlife.com.py"
 SITE_NAME = "ZEEKR Paraguay"
@@ -233,6 +241,17 @@ ICON_PAUSE = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><pat
 ICON_DOWNLOAD = '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15.5h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 ICON_GLOBE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 12h18M12 3c3 3.5 3 14 0 18M12 3c-3 3.5-3 14 0 18" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>'
 
+# Redes: el orden y los enlaces salen de SETTINGS["social"]; instagram y linkedin son los íconos de siempre
+SOCIAL_SVG = {
+    "instagram": '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg>',
+    "linkedin": '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M4.98 3.5A2.49 2.49 0 1 1 5 8.48a2.49 2.49 0 0 1-.02-4.98ZM3 9.75h4v11H3v-11Zm6.5 0h3.83v1.5h.05c.53-1 1.84-2.06 3.79-2.06 4.05 0 4.8 2.67 4.8 6.14v5.42h-4v-4.8c0-1.15-.02-2.63-1.6-2.63-1.6 0-1.85 1.25-1.85 2.55v4.88h-4v-11Z"/></svg>',
+    "facebook": '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.63c-.29-.04-1.28-.13-2.43-.13-2.4 0-4.05 1.47-4.05 4.16V9.9H7.5V13h2.72v8h3.28Z"/></svg>',
+    "tiktok": '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.6 2h-3.05v13.1a2.3 2.3 0 1 1-1.9-2.26V9.7a5.4 5.4 0 1 0 4.95 5.38V8.67a6.3 6.3 0 0 0 3.65 1.17V6.78A3.35 3.35 0 0 1 16.6 2Z"/></svg>',
+    "youtube": '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M21.6 7.2a2.5 2.5 0 0 0-1.76-1.77C18.28 5 12 5 12 5s-6.28 0-7.84.43A2.5 2.5 0 0 0 2.4 7.2 26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.76 1.77C5.72 19 12 19 12 19s6.28 0 7.84-.43a2.5 2.5 0 0 0 1.76-1.77A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8ZM10 15.02V8.98L15.2 12 10 15.02Z"/></svg>',
+}
+SOCIAL_LABEL = {"linkedin": "LinkedIn de ZEEKR", "facebook": "Facebook de ZEEKR Paraguay", "tiktok": "TikTok de ZEEKR Paraguay", "youtube": "YouTube de ZEEKR"}
+SOCIAL_DEFAULT = [{"network": "instagram", "url": "https://www.instagram.com/zeekrparaguay/"}, {"network": "linkedin", "url": "https://www.linkedin.com/company/zeekr"}]
+
 
 def _logo_polys(scale, off):
     def pts(seq):
@@ -343,6 +362,126 @@ MODELS = {
 }
 MODEL_ORDER = ["7x", "x", "001"]
 
+# --- fichas de modelo (literales; con --content vienen de content.json)
+def feats(items):
+    return [{"title": t, "text": x} for t, x in items]
+
+
+def gal(items):
+    return [{"file": f, "alt": a} for f, a in items]
+
+
+def rows(pairs):
+    return [{"k": k, "v": v} for k, v in pairs]
+
+
+SECTIONS = {
+    "7x": [
+        {"type": "features", "kicker": "Explorá lo que hace único al ZEEKR 7X", "title": "Conocé el SUV de próxima generación", "dark": False, "items": feats([
+            ("Diseño futurista", "Líneas limpias, proporciones elegantes y una presencia que destaca en la ciudad."),
+            ("Cabina Snapdragon 8295", "Respuesta inmediata, controles fluidos y una experiencia digital de primer nivel."),
+            ("Confort de primera clase", "Asientos NAPPA con ventilación, calefacción y masaje para viajar mejor."),
+            ("Seguridad que anticipa", "ADAS avanzado y 7 airbags para manejar con total confianza."),
+            ("0–100 km/h en 3,8 s", "Aceleración contundente y control total, sin sacrificar estabilidad."),
+            ("Sistema de alto voltaje 800 V", "Carga ultrarrápida y gestión térmica eficiente para rendir siempre.")])},
+        {"type": "video", "video": "images/zeekr7x/video-exterior.mp4", "image": "images/zeekr7x/diseno-exterior.jpg", "kicker": "Exterior", "title": "Presencia que se anticipa",
+         "text": "Proporciones de SUV con la elegancia de un diseño escandinavo: firma lumínica continua, superficies limpias y detalles que hablan de calidad."},
+        {"type": "split", "kicker": "Interior", "title": "Un interior que te hace sentir como en casa",
+         "text": "Asientos tapizados en piel, volante con calefacción y memorias, luz ambiental personalizable y mucho más. La segunda fila suma calefacción, reclinación eléctrica y cortina de privacidad.",
+         "image": "images/zeekr7x/tecnologia-2.jpg", "image_alt": "Interior del ZEEKR 7X con vista al mar", "dark": True, "reverse": False},
+        {"type": "features", "kicker": "Tecnología", "title": "Tecnología que impulsa el futuro", "dark": False, "items": feats([
+            ("Procesador Qualcomm 8295", "Chip de 5 nm para una experiencia digital en cabina más rápida y avanzada, líder en su segmento."),
+            ("Sistema interactivo total", "Panel HD de 13″, head-up display AR de 36″ y pantalla central Mini-LED 3.5K de 16″."),
+            ("ZEEKR OTA + App", "Actualizaciones por aire y control remoto del vehículo desde la app, desde cualquier lugar."),
+            ("Batería Qilin 100 kWh", "Autonomía de hasta 543 km WLTP en la versión Performance."),
+            ("Gestión térmica PTM 2.0", "Administra el calor del vehículo y aprovecha mejor la energía para un desempeño eficiente."),
+            ("Arquitectura SEA", "Plataforma nativa eléctrica del Grupo Geely, con cerca de 30 años de experiencia en fabricación de vehículos.")])},
+        {"type": "split", "kicker": "Seguridad", "title": "Protección integral de 720° para cada pasajero",
+         "text": "Estructura tipo cúpula reforzada, 7 airbags con cortina, trasera de aluminio de una pieza y batería con 10 rejillas capaz de resistir hasta 75 toneladas de impacto lateral.",
+         "image": "images/zeekr7x/generacion-1.jpg", "image_alt": "Vista en corte del ZEEKR 7X con sus airbags desplegados", "dark": False, "reverse": True},
+        {"type": "features", "kicker": "Seguridad", "title": "Diseñado para anticiparse", "dark": True, "items": feats([
+            ("Seguridad activa 360°", "Asistencias avanzadas combinadas con múltiples cámaras, en todo momento."),
+            ("Modo Centinela", "Graba automáticamente la actividad circundante al detectar comportamiento sospechoso, con acceso solo para el propietario."),
+            ("Estructura tipo cúpula", "Absorbe la energía del impacto y protege pasajeros y batería.")])},
+        {"type": "gallery", "kicker": "Galería", "title": "Cada detalle, a la vista", "gallery": gal([
+            ("images/zeekr7x/apariencia-1.jpg", "ZEEKR 7X, vista trasera en estudio"), ("images/zeekr7x/apariencia-3.jpg", "ZEEKR 7X, vista lateral trasera"),
+            ("images/zeekr7x/apariencia-6.jpg", "Firma lumínica frontal del ZEEKR 7X"), ("images/zeekr7x/diseno-interior-1.jpg", "Cabina del ZEEKR 7X con pantalla central Mini-LED"),
+            ("images/zeekr7x/diseno-interior-2.jpg", "Asientos traseros del ZEEKR 7X"), ("images/zeekr7x/generacion-3.jpg", "Techo panorámico del ZEEKR 7X"),
+            ("images/zeekr7x/lujo-confort.jpg", "Espacio interior del ZEEKR 7X en uso"), ("images/zeekr7x/sentidos-3.jpg", "Cabina del ZEEKR 7X vista desde arriba")])},
+    ],
+    "x": [
+        {"type": "split", "kicker": "El SUV urbano que potencia tu estilo de vida", "title": "Llevando el SUV urbano al siguiente nivel",
+         "text": "El ZEEKR X es un SUV compacto de lujo creado para los estilos de vida urbanos de hoy: el compañero perfecto para aventureros y familias. Líneas atrevidas, tecnología inteligente y máxima comodidad en un solo vehículo.",
+         "image": "images/zeekrx/prestacion1.png", "image_alt": "ZEEKR X circulando por la ciudad", "dark": False, "reverse": False},
+        {"type": "stats", "kicker": "Prestaciones", "title": "0–100 km/h en 3,8 s (AWD)", "dark": True, "items": feats([("428 HP", "Potencia máxima (AWD)"), ("190 km/h", "Velocidad máxima"), ("440 km", "Autonomía WLTP (RWD)"), ("69 kWh", "Batería")])},
+        {"type": "features", "kicker": "Prestaciones", "title": "Ingeniería para la ciudad", "dark": False, "items": feats([
+            ("XTCS antideslizante inteligente", "Control de tracción propio de ZEEKR: identifica y controla el derrape en 6 ms, 10 veces más rápido que un TCS tradicional."),
+            ("Techo panorámico doble", "Tragaluz de 1,21 m² con aislamiento térmico y acústico, y barrera UV del 99 %."),
+            ("Seguridad integral", "Vigas anticolisión multicapa de 8 tubos y 7 airbags con protección envolvente de 360°.")])},
+        {"type": "band", "image": "images/zeekrx/interior-charcoal-black-and-golden-trim.jpg", "image_alt": "Interior del ZEEKR X en Charcoal Black con detalles dorados", "kicker": "Interior",
+         "title": "Cabina inteligente, materiales nobles", "text": "Charcoal Black con acabados dorados, pantalla central y una experiencia digital que evoluciona con actualizaciones OTA.", "position": "50% 40%"},
+        {"type": "features", "kicker": "Inteligente", "title": "ZEEKR AD y cabina inteligente", "dark": True, "items": feats([
+            ("Actualizaciones OTA", "Las actualizaciones de software garantizan que tu vehículo esté siempre al día."),
+            ("ZEEKR AD", "5 cámaras HD, 5 radares milimétricos y 12 sensores ultrasónicos con más de 10 funciones de asistencia: crucero adaptativo y estacionamiento."),
+            ("Luces diurnas de doble línea", "56 LED independientes integran DRL, luces laterales e intermitentes en un solo sistema.")])},
+        {"type": "gallery", "kicker": "Galería", "title": "El ZEEKR X en detalle", "gallery": gal([
+            ("images/zeekrx/caracteristica1.jpg", "Detalle del techo panorámico del ZEEKR X"), ("images/zeekrx/caracteristica3.jpg", "Cabina del ZEEKR X"),
+            ("images/zeekrx/caracteristica4.jpg", "Detalle de la cámara del ZEEKR X"), ("images/zeekrx/inteligente3.png", "Pantalla central del ZEEKR X"),
+            ("images/zeekrx/inteligente4.png", "Sensores de ZEEKR AD"), ("images/zeekrx/prestacion2.png", "ZEEKR X en la ciudad al atardecer")])},
+    ],
+    "001": [
+        {"type": "split", "kicker": "El crossover de lujo, reinventado", "title": "El primer deportivo familiar eléctrico puro producido en masa del mundo",
+         "text": "El ZEEKR 001 ofrece algo nuevo para todos. La combinación de elegancia y confort brinda un viaje lujoso para las aventuras de toda la familia.",
+         "image": "images/zeekr001/prestacion1.png", "image_alt": "ZEEKR 001 en ruta de montaña", "dark": False, "reverse": False},
+        {"type": "split", "kicker": "Arquitectura SEA", "title": "Tecnología que lleva los vehículos eléctricos más lejos",
+         "text": "Cada ZEEKR se basa en la Arquitectura de Experiencia Sostenible (SEA): una plataforma totalmente eléctrica, modular y escalable que integra las últimas tecnologías. Autonomía de hasta 620 km y carga del 10 % al 80 % en menos de 30 minutos con carga DC de 200 kW.",
+         "image": "images/zeekr001/chasis1.jpg", "image_alt": "Chasis y arquitectura SEA del ZEEKR 001", "dark": True, "reverse": True},
+        {"type": "stats", "kicker": "Prestaciones", "title": "0–100 km/h en 3,8 s (AWD)", "dark": False, "items": feats([("536 HP", "Potencia máxima (AWD)"), ("200 km/h", "Velocidad máxima"), ("620 km", "Autonomía WLTP (RWD)"), ("100 kWh", "Batería")])},
+        {"type": "features", "kicker": "Prestaciones", "title": "Potencia con refinamiento", "dark": False, "items": feats([
+            ("Suspensión neumática automática", "Ajuste de altura en cinco niveles en tiempo real. Disponible en la versión Flagship."),
+            ("Frenos regenerativos", "Aprovechan la energía para recargar la batería mientras manejás."),
+            ("Motores de alto rendimiento", "536 HP, 16.500 rpm de rotación máxima y hasta 97,86 % de eficiencia.")])},
+        {"type": "band", "image": "images/zeekr001/interior-charcoal-black-and-golden-trim.jpg", "image_alt": "Interior del ZEEKR 001 en Charcoal Black con detalles dorados", "kicker": "Interior",
+         "title": "Lujo digital, materiales de primera", "text": "Acabados premium y tecnología de cabina de última generación, siempre al día gracias a las actualizaciones OTA.", "position": "50% 45%"},
+        {"type": "features", "kicker": "Inteligente", "title": "Cabina inteligente con OTA", "dark": True, "items": feats([
+            ("Falcon Eye Vidar", "15 cámaras HD, 7 kits de cámaras de 8 MP, radar de alcance ultralargo de 250 m y 12 sensores ultrasónicos."),
+            ("Interior lujoso", "Materiales de primera calidad y acabados cuidados: tecnología digital de cabina de última generación."),
+            ("Baúl de hasta 2.144 L", "Baúl divisible que puede ampliarse hasta 2.144 litros, para usarlo como quieras.")])},
+        {"type": "gallery", "kicker": "Galería", "title": "El ZEEKR 001 en detalle", "gallery": gal([
+            ("images/zeekr001/caracteristica1.jpg", "Frente del ZEEKR 001"), ("images/zeekr001/caracteristica2.jpg", "Firma lumínica trasera del ZEEKR 001"),
+            ("images/zeekr001/caracteristica3.jpg", "Cabina digital del ZEEKR 001"), ("images/zeekr001/caracteristica4.jpg", "Baúl del ZEEKR 001 con asientos abatidos"),
+            ("images/zeekr001/inteligente3.jpg", "Interior delantero del ZEEKR 001"), ("images/zeekr001/prestacion3.png", "ZEEKR 001 en movimiento")])},
+    ],
+}
+
+
+VERSIONS = {
+    "7x": ("Elegí el ZEEKR 7X que se adapta a tu estilo", [
+        {"name": "Smart", "subtitle": "Tu acceso al ZEEKR 7X", "rows": rows([("Autonomía", "480 km (WLTP)"), ("Aceleración 0–100 km/h", "6,0 s"), ("Potencia máxima", "421 HP · RWD"), ("Batería", "75 kWh")])},
+        {"name": "Performance", "subtitle": "La máxima expresión", "rows": rows([("Autonomía", "543 km (WLTP)"), ("Aceleración 0–100 km/h", "3,8 s"), ("Potencia máxima", "646 HP · AWD"), ("Batería", "100 kWh")])}]),
+    "x": ("Elegí el ZEEKR X que se adapta a tu estilo", [
+        {"name": "Flagship AWD", "subtitle": "La máxima experiencia ZEEKR", "rows": rows([("Aceleración 0–100 km/h", "3,8 s"), ("Motor", "Doble"), ("Tracción", "All Wheel Drive"), ("Autonomía", "420 km (WLTP)"), ("Potencia", "428 HP"), ("Rines", "Aluminio 20″")])},
+        {"name": "Premium RWD", "subtitle": "Tu acceso a ZEEKR", "rows": rows([("Aceleración 0–100 km/h", "5,6 s"), ("Motor", "Sencillo"), ("Tracción", "Rear Wheel Drive"), ("Autonomía", "440 km (WLTP)"), ("Potencia", "268 HP"), ("Rines", "Aluminio 19″")])}]),
+    "001": ("La máxima experiencia ZEEKR", [
+        {"name": "Flagship AWD", "subtitle": "La máxima expresión", "rows": rows([("Aceleración 0–100 km/h", "3,8 s"), ("Motor", "Doble"), ("Tracción", "All Wheel Drive"), ("Autonomía", "580 km (WLTP)"), ("Potencia", "536 HP"), ("Rines de aluminio", "22″"), ("Suspensión activa", "Sí"), ("Sistema de audio", "Yamaha, 12 parlantes + subwoofer"), ("Asientos con ventilación y masaje", "Sí")])},
+        {"name": "Sport RWD", "subtitle": "Tu acceso al ZEEKR 001", "rows": rows([("Aceleración 0–100 km/h", "7,2 s"), ("Motor", "Sencillo"), ("Tracción", "Rear Wheel Drive"), ("Autonomía", "620 km (WLTP)"), ("Potencia", "268 HP"), ("Rines de aluminio", "21″"), ("Suspensión activa", "No"), ("Sistema de audio", "Yamaha, 12 parlantes + subwoofer"), ("Asientos con ventilación y masaje", "No")])}]),
+}
+DIMENSIONS = {"7x": rows([("Longitud", "4.787 mm"), ("Ancho (incl. espejos)", "1.930 mm"), ("Altura máxima", "1.650 mm"), ("Distancia entre ejes", "2.900 mm")]),
+              "x": rows([("Longitud", "4.432 mm"), ("Ancho", "1.836 mm"), ("Altura", "1.566 mm"), ("Distancia entre ejes", "2.750 mm")]),
+              "001": rows([("Longitud", "4.955 mm"), ("Ancho", "2.005 mm"), ("Altura", "1.560 mm"), ("Distancia entre ejes", "2.999 mm")])}
+WARRANTY = {"7x": rows([("Vehículo", "5 años o 100.000 km, lo que ocurra primero"), ("Batería", "8 años o 160.000 km, lo que ocurra primero")]), "x": [], "001": []}
+PAGE_HERO = {"7x": ("images/hero/7x-desktop.jpg", "images/hero/7x-mobile.jpg", "60% 50%"), "x": ("images/zeekrx/exterior-mist-grey.jpg", None, "50% 50%"), "001": ("images/zeekr001/exterior-phantom-black.jpg", None, "60% 50%")}
+TECH_ITEMS = [
+    ("Arquitectura SEA", "Plataforma 100 % eléctrica, modular y escalable del Grupo Geely: la base de cada ZEEKR."),
+    ("Actualizaciones OTA", "Software que evoluciona con el tiempo: tu ZEEKR incorpora mejoras de forma remota."),
+    ("Diseño desde Gotemburgo", "Centro global de diseño en Suecia, dirigido por Stefan Sielaff."),
+    ("Seguridad integral", "Estructuras reforzadas y asistencias avanzadas a la conducción en toda la gama."),
+]
+for _k, _m in MODELS.items():
+    _m["versions_title"], _m["versions"] = VERSIONS[_k]
+    _m["page_hero"], _m["page_hero_mobile"], _m["og_pos"] = PAGE_HERO[_k]
+    _m.update(dimensions=DIMENSIONS[_k], warranty=WARRANTY[_k], sections=SECTIONS[_k], menu=None)
+
 NEWS = [
     {
         "slug": "lanzamiento-zeekr-7x-ciudad-del-este",
@@ -424,6 +563,74 @@ HOME_FAQ = [
 ]
 
 
+# --------------------------------------------------- contenido desde content.json
+SETTINGS = None      # dict desde content.json; None = literales del código
+HERO_SLIDES = None   # lista desde content.json; None = un slide por modelo
+
+
+def _pos(v):
+    """Posición de recorte; "50% 50%" es el default del CSS y no necesita estilo inline."""
+    return v if v and v != "50% 50%" else None
+
+
+def load_content(path):
+    """Reemplaza los datos globales por los de content.json y suma sus traducciones a TRANSLATIONS."""
+    global DOMAIN, SITE_NAME, GA_ID, WA_NUMBER, PHONES, MODELS, MODEL_ORDER, NEWS, HOME_FAQ, SETTINGS, HERO_SLIDES
+    c = json.load(open(path))
+    s = c["site"]
+    DOMAIN, SITE_NAME, GA_ID, WA_NUMBER = s["domain"].rstrip("/"), s["name"], s.get("ga_id", ""), s["whatsapp"]
+    SETTINGS = c["settings"]
+    PHONES = [(p["kind"], p["display"], p["e164"]) for p in SETTINGS["phones"]]
+    HOME_FAQ = [(f["q"], f["a"]) for f in SETTINGS.get("home_faq", [])]
+    MODELS, MODEL_ORDER = {}, []
+    for m in c["models"]:
+        MODEL_ORDER.append(m["key"])
+        MODELS[m["key"]] = {
+            "slug": m["slug"], "name": m["name"], "short": m["short"], "eyebrow": m["eyebrow"], "tagline": m["tagline"], "claim": m["claim"],
+            "hero_desktop": m["hero_image"], "hero_mobile": m.get("hero_image_mobile"), "hero_pos": m.get("hero_position", "50% 50%"),
+            "page_hero": m["hero_image"], "page_hero_mobile": m.get("hero_image_mobile"), "og_pos": m.get("og_position", "50% 50%"),
+            "card": m["card_image"], "card_pos": m.get("card_position", "50% 50%"), "card_pos_m": m.get("card_position_mobile") or m.get("card_position", "50% 50%"),
+            "menu": m.get("menu_image"), "pdf": m.get("pdf") or None,
+            "stats": [(x["value"], x["label"]) for x in m.get("stats", [])],
+            "meta_title": m["seo_title"], "meta_desc": m["seo_description"], "schema_desc": m["schema_description"],
+            "faq": [(f["q"], f["a"]) for f in m.get("faq", [])], "dimensions": m.get("dimensions", []), "warranty": m.get("warranty", []),
+            "versions_title": m.get("versions_title") or "Versiones", "versions": m.get("versions", []), "sections": m.get("sections", []),
+        }
+    HERO_SLIDES = c.get("hero_slides") or None
+    for sl in HERO_SLIDES or []:  # el slider usa las fotos del slide; la ficha, las del modelo
+        if sl.get("model") in MODELS:
+            MODELS[sl["model"]]["hero_desktop"] = sl["image_desktop"]
+            MODELS[sl["model"]]["hero_mobile"] = sl.get("image_mobile")
+    NEWS = []
+    for n in c["news"]:
+        q = n.get("quote")
+        NEWS.append({"slug": n.get("slug") or "", "date": n["date"], "kicker": n.get("kicker", ""), "title": n["title"], "lead": n.get("lead", ""),
+                     "meta_desc": n.get("meta_description") or None, "body": n.get("body") or None,
+                     "quote": (q["text"], q.get("who") or None, q.get("org") or None) if q and q.get("text") else None, "quote_pos": n.get("quote_pos", 2),
+                     "place": n.get("place") or None, "place_locality": n.get("place_locality") or None, "img": n["cover"], "img_pos": _pos(n.get("cover_position")),
+                     "gallery": [(g["file"], g["alt"]) for g in n.get("gallery", [])], "cta_model": n.get("cta_model") or None})
+    NEWS.sort(key=lambda n: n["date"], reverse=True)
+    for lang, d in c.get("translations", {}).items():
+        TRANSLATIONS.setdefault(lang, {}).update(d)
+
+
+if CLI.content:
+    load_content(CLI.content)
+
+
+def home_hero():
+    """(desktop, mobile) de la primera diapositiva: OG y preload de la portada."""
+    if HERO_SLIDES:
+        return HERO_SLIDES[0]["image_desktop"], HERO_SLIDES[0].get("image_mobile")
+    m = MODELS[MODEL_ORDER[0]]
+    return m["hero_desktop"], m["hero_mobile"]
+
+
+def setting(key, default):
+    return SETTINGS[key] if SETTINGS is not None and SETTINGS.get(key) else default
+
+
+
 # ------------------------------------------------------------------ partials
 def btn(label, href=None, kind="cream", extra="", icon=None, attrs=""):
     inner = f"<span>{label}</span>" + (icon or "")
@@ -454,12 +661,24 @@ def header(active="", alts=None):
 
     def cls(a):
         return "menu-link is-active" if a == active else "menu-link"
+    menu = setting("header_menu", [{"label": "Modelos", "target": "modelos", "url": ""}, {"label": "Nosotros", "target": "nosotros", "url": ""}, {"label": "Noticias", "target": "noticias", "url": ""}])
+    links = []
+    for it in menu:
+        if it["target"] == "modelos":
+            links.append(f'<button class="menu-link models-trigger {cls("modelos")}" type="button" aria-expanded="false" aria-controls="modelsPanel" data-toggle-models>{_(it["label"])}</button>')
+        elif it["target"] == "url":
+            links.append(f'<a class="menu-link" href="{it["url"]}">{_(it["label"])}</a>')
+        else:
+            links.append(f'<a class="{cls(it["target"])}" href="{url_section(it["target"])}">{_(it["label"])}</a>')
+    nav = "\n        ".join(links)
     gates = "\n".join(
         f'''        <a class="gate-card" href="{url_model(k)}">
-          {picture(f"images/menu/zeekr_{k}.png", MODELS[k]["name"], (300, 600), sizes="260px", alpha=True)}
+          {picture(MODELS[k].get("menu") or f"images/menu/zeekr_{k}.png", MODELS[k]["name"], (300, 600), sizes="260px", alpha=True)}
           <span class="gate-name">{MODELS[k]["name"]}</span>
           <span class="gate-sub">{_(MODELS[k]["eyebrow"])}</span>
-        </a>''' for k in ["001", "x", "7x"])
+        </a>''' for k in reversed(MODEL_ORDER))
+    mobile_models = "\n      ".join(f'<a data-close-menu href="{url_model(k)}">{MODELS[k]["name"]}</a>' for k in MODEL_ORDER)
+    cookie = setting("cookie_text", "Cuando visitás nuestro sitio web (“Plataformas ZEEKR”), utilizamos cookies y otras tecnologías de seguimiento similares para mejorar la funcionalidad de las Plataformas ZEEKR, el rendimiento, medir el tráfico del sitio web, analizar el comportamiento del usuario y ajustar nuestro contenido y servicios. Si hacés clic en “Aceptar todo” nos autorizás a procesar tus datos personales para tales fines. Si hacés clic en “Rechazar todo” solo utilizaremos cookies y tecnologías estrictamente necesarias para la funcionalidad de la Plataforma ZEEKR. Para más información o para consentir cookies específicas, hacé clic en “Configuración de cookies”.")
     return f'''
 <a class="skip-link" href="#main">{_("Saltar al contenido")}</a>
 <header class="site-header" id="siteHeader">
@@ -467,9 +686,7 @@ def header(active="", alts=None):
     <div class="header-left">
       <a class="header-logo" href="{url_home()}" aria-label="{esc(_("ZEEKR Paraguay — Inicio"))}">{LOGO_SVG}</a>
       <nav class="header-menus" aria-label="{esc(_("Principal"))}">
-        <button class="menu-link models-trigger {cls('modelos')}" type="button" aria-expanded="false" aria-controls="modelsPanel" data-toggle-models>{_("Modelos")}</button>
-        <a class="{cls('nosotros')}" href="{url_section('nosotros')}">{_("Nosotros")}</a>
-        <a class="{cls('noticias')}" href="{url_section('noticias')}">{_("Noticias")}</a>
+        {nav}
       </nav>
     </div>
     <a class="header-wordmark" href="{url_home()}" aria-label="{esc(_("ZEEKR Paraguay — Inicio"))}">{WORDMARK_SVG}</a>
@@ -496,9 +713,7 @@ def header(active="", alts=None):
     </div>
     <nav aria-label="{esc(_("Menú móvil"))}">
       <p class="mm-eyebrow">{_("Modelos")}</p>
-      <a data-close-menu href="{url_model('7x')}">ZEEKR 7X</a>
-      <a data-close-menu href="{url_model('x')}">ZEEKR X</a>
-      <a data-close-menu href="{url_model('001')}">ZEEKR 001</a>
+      {mobile_models}
       <p class="mm-eyebrow">{_("Marca")}</p>
       <a data-close-menu href="{url_section('noticias')}">{_("Noticias")}</a>
       <a data-close-menu href="{url_section('nosotros')}">{_("Nosotros")}</a>
@@ -513,7 +728,7 @@ def header(active="", alts=None):
 <div class="nav-shade" data-close-models hidden></div>
 <div class="cookie-banner" id="cookieBanner" hidden role="dialog" aria-label="{esc(_("Consentimiento de cookies"))}">
   <div class="cookie-inner">
-    <p class="cookie-text">{_("Cuando visitás nuestro sitio web (“Plataformas ZEEKR”), utilizamos cookies y otras tecnologías de seguimiento similares para mejorar la funcionalidad de las Plataformas ZEEKR, el rendimiento, medir el tráfico del sitio web, analizar el comportamiento del usuario y ajustar nuestro contenido y servicios. Si hacés clic en “Aceptar todo” nos autorizás a procesar tus datos personales para tales fines. Si hacés clic en “Rechazar todo” solo utilizaremos cookies y tecnologías estrictamente necesarias para la funcionalidad de la Plataforma ZEEKR. Para más información o para consentir cookies específicas, hacé clic en “Configuración de cookies”.")}</p>
+    <p class="cookie-text">{_(cookie)}</p>
     <div class="cookie-actions">
       <button class="btn btn-outline-dark" type="button" data-cookie-settings aria-expanded="false" aria-controls="cookieSettings">{_("Configuración de cookies")}</button>
       <button class="btn btn-dark" type="button" data-cookie-reject>{_("Rechazar todo")}</button>
@@ -530,19 +745,29 @@ def header(active="", alts=None):
 
 def footer():
     phones = "".join(f'<li><a href="tel:{tel}"><span class="ph-kind">{_(kind)}</span> {num}</a></li>' for kind, num, tel in PHONES)
+    model_links = "\n        ".join(f'<li><a href="{url_model(k)}">{MODELS[k]["name"]}</a></li>' for k in MODEL_ORDER)
+    tagline = setting("footer_tagline", "Distribuidor oficial ZEEKR en Paraguay.")
+    disclaimer = setting("legal_disclaimer", "Toda la información contenida en este material está basada en datos disponibles al momento de su publicación. Las fotos y pantallas son de carácter ilustrativo y de referencia. Los datos de autonomía y prestaciones se basan en ciclos de prueba (WLTP / pruebas de ingeniería) y pueden variar según clima, camino, carga, batería y configuración del vehículo.")
+    social = setting("social", SOCIAL_DEFAULT)
+    icons = []
+    for s in social:
+        if s["network"] == "instagram":
+            icons.append(f'<a href="{s["url"]}" rel="noopener" target="_blank" aria-label="{esc(_("Instagram de ZEEKR Paraguay"))}">\n          {SOCIAL_SVG["instagram"]}\n        </a>')
+        elif s["network"] in SOCIAL_SVG:
+            icons.append(f'<a href="{s["url"]}" rel="noopener" target="_blank" aria-label="{esc(_(SOCIAL_LABEL[s["network"]]))}">\n          {SOCIAL_SVG[s["network"]]}\n        </a>')
+    wa = f'<a href="https://wa.me/{WA_NUMBER}" rel="noopener" target="_blank" aria-label="{esc(_("WhatsApp de ZEEKR Paraguay"))}">{ICON_WA}</a>'
+    social_html = "\n        ".join([icons[0], wa] + icons[1:]) if icons else wa   # orden actual: Instagram, WhatsApp, LinkedIn
     return f'''
 <footer class="site-footer">
   <div class="footer-grid">
     <div class="footer-brand">
       <a class="footer-logo" href="{url_home()}" aria-label="{esc(_("ZEEKR Paraguay — Inicio"))}">{LOGO_SVG}{WORDMARK_SVG}</a>
-      <p class="footer-tag">{_("Distribuidor oficial ZEEKR en Paraguay.")}<br>Santa Rosa Paraguay.</p>
+      <p class="footer-tag">{_(tagline)}<br>Santa Rosa Paraguay.</p>
     </div>
     <nav class="footer-col" aria-label="{esc(_("Modelos"))}">
       <p class="footer-title">{_("Modelos")}</p>
       <ul>
-        <li><a href="{url_model('7x')}">ZEEKR 7X</a></li>
-        <li><a href="{url_model('x')}">ZEEKR X</a></li>
-        <li><a href="{url_model('001')}">ZEEKR 001</a></li>
+        {model_links}
         <li><a href="{url_section('modelos')}">{_("Todos los modelos")}</a></li>
       </ul>
     </nav>
@@ -562,19 +787,13 @@ def footer():
     <div class="footer-col footer-social">
       <p class="footer-title">{_("Seguinos")}</p>
       <div class="social-row">
-        <a href="https://www.instagram.com/zeekrparaguay/" rel="noopener" target="_blank" aria-label="{esc(_("Instagram de ZEEKR Paraguay"))}">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg>
-        </a>
-        <a href="https://wa.me/{WA_NUMBER}" rel="noopener" target="_blank" aria-label="{esc(_("WhatsApp de ZEEKR Paraguay"))}">{ICON_WA}</a>
-        <a href="https://www.linkedin.com/company/zeekr" rel="noopener" target="_blank" aria-label="{esc(_("LinkedIn de ZEEKR"))}">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true" focusable="false"><path d="M4.98 3.5A2.49 2.49 0 1 1 5 8.48a2.49 2.49 0 0 1-.02-4.98ZM3 9.75h4v11H3v-11Zm6.5 0h3.83v1.5h.05c.53-1 1.84-2.06 3.79-2.06 4.05 0 4.8 2.67 4.8 6.14v5.42h-4v-4.8c0-1.15-.02-2.63-1.6-2.63-1.6 0-1.85 1.25-1.85 2.55v4.88h-4v-11Z"/></svg>
-        </a>
+        {social_html}
       </div>
     </div>
   </div>
   <div class="footer-bottom">
     <p class="footer-copy">{_("© 2026 ZEEKR y todos sus afiliados. Todos los derechos reservados")} · <span translate="no">ZEEKR Paraguay</span></p>
-    <p class="footer-disclaimer">{_("Toda la información contenida en este material está basada en datos disponibles al momento de su publicación. Las fotos y pantallas son de carácter ilustrativo y de referencia. Los datos de autonomía y prestaciones se basan en ciclos de prueba (WLTP / pruebas de ingeniería) y pueden variar según clima, camino, carga, batería y configuración del vehículo.")}</p>
+    <p class="footer-disclaimer">{_(disclaimer)}</p>
   </div>
 </footer>
 {contact_modal()}'''
@@ -738,22 +957,31 @@ def render_page(path, title, desc, content, nav_active, jsonld, og_img, preload=
     print("OK", out)
 
 
+def contact_points():
+    def fmt(e164):  # +595971370006 -> +595-971-370-006
+        n = e164[4:]
+        return f"+595-{n[:3]}-{n[3:6]}-{n[6:]}"
+    sales = next((p for p in PHONES if p[0] == "Ventas"), PHONES[0])
+    cs = next((p for p in PHONES if p[0] == "Postventa"), None)
+    pts = [{"@type": "ContactPoint", "telephone": fmt(sales[2]), "contactType": "sales", "areaServed": "PY", "availableLanguage": list(LANGS)}]
+    if cs:
+        pts.append({"@type": "ContactPoint", "telephone": fmt(cs[2]), "contactType": "customer service", "areaServed": "PY", "availableLanguage": ["es"]})
+    return pts
+
+
 def org():
     return {
         "@type": ["AutoDealer", "Organization"], "@id": DOMAIN + "/#org",
         "name": SITE_NAME, "alternateName": "Zeekr Paraguay", "url": DOMAIN + "/",
         "logo": {"@type": "ImageObject", "url": DOMAIN + "/icons/icon-512.png", "width": 512, "height": 512},
         "image": DOMAIN + "/images/_opt/og/home.jpg",
-        "description": _("Distribuidor oficial de ZEEKR en Paraguay: vehículos eléctricos premium ZEEKR 001, ZEEKR X y ZEEKR 7X."),
+        "description": _(setting("org_description", "Distribuidor oficial de ZEEKR en Paraguay: vehículos eléctricos premium ZEEKR 001, ZEEKR X y ZEEKR 7X.")),
         "brand": {"@type": "Brand", "name": "ZEEKR"},
         "parentOrganization": {"@type": "Organization", "name": "Santa Rosa Paraguay"},
         "areaServed": {"@type": "Country", "name": "Paraguay"},
-        "telephone": "+595971370006",
-        "contactPoint": [
-            {"@type": "ContactPoint", "telephone": "+595-971-370-006", "contactType": "sales", "areaServed": "PY", "availableLanguage": ["es", "en", "pt", "zh"]},
-            {"@type": "ContactPoint", "telephone": "+595-974-772-247", "contactType": "customer service", "areaServed": "PY", "availableLanguage": ["es"]},
-        ],
-        "sameAs": ["https://www.instagram.com/zeekrparaguay/", "https://www.zeekrlife.com/"],
+        "telephone": PHONES[0][2],
+        "contactPoint": contact_points(),
+        "sameAs": [s["url"] for s in setting("social", SOCIAL_DEFAULT) if s["network"] in ("instagram", "facebook", "tiktok", "youtube")] + ["https://www.zeekrlife.com/"],
     }
 
 
@@ -799,13 +1027,17 @@ def faq_block(qa, title="Preguntas frecuentes", kicker="Te ayudamos"):
 
 def contact_strip(model_name=None):
     attr = f' data-model="{model_name}"' if model_name else ""
+    groups = {}
+    for kind, num, tel in PHONES:
+        groups.setdefault(kind, []).append(f'<a href="tel:{tel}">{num.replace(" ", "&nbsp;")}</a>')
+    phones = " · ".join(f"{_(kind)}: " + " · ".join(links) for kind, links in groups.items())
     return f'''
 <section class="contact-strip" id="contacto" aria-labelledby="contactTitle">
   <div class="contact-inner reveal">
     <div class="contact-copy">
       {eyebrow("Estamos para ayudarte")}
       <h2 id="contactTitle">{_("¿Listo para manejar un ZEEKR?")}</h2>
-      <p>{_("Coordiná tu prueba de manejo con un asesor.")} {_("Ventas")}: <a href="tel:+595971370006">0971&nbsp;370&nbsp;006</a> · <a href="tel:+595976979155">0976&nbsp;979&nbsp;155</a> · <a href="tel:+595976203280">0976&nbsp;203&nbsp;280</a> · {_("Postventa")}: <a href="tel:+595974772247">0974&nbsp;772&nbsp;247</a></p>
+      <p>{_("Coordiná tu prueba de manejo con un asesor.")} {phones}</p>
     </div>
     <div class="contact-actions">
       {btn(_("Agendá tu prueba de manejo"), kind="accent", attrs=' data-open-contact data-intent="test-drive"' + attr)}
@@ -829,29 +1061,34 @@ def page_intro(kicker, title, lead=None, tag="h1"):
 # ------------------------------------------------------------------ home
 def hero_slider():
     slides, dots = [], []
-    n = len(MODEL_ORDER)
-    for i, key in enumerate(MODEL_ORDER):
-        m = MODELS[key]
+    slides_src = HERO_SLIDES or [{"model": k, "image_desktop": MODELS[k]["hero_desktop"], "image_mobile": MODELS[k]["hero_mobile"], "eyebrow": MODELS[k]["eyebrow"], "title": MODELS[k]["name"],
+                                  "claim": MODELS[k]["claim"], "cta_primary_label": "Conocé el {model}", "cta_primary_url": "", "cta_secondary_intent": "test-drive"} for k in MODEL_ORDER]
+    n = len(slides_src)
+    for i, sl in enumerate(slides_src):
         first = i == 0
-        pic = picture(m["hero_desktop"], f"{m['name']} — {_(m['claim'])}", (1200, 1800, 2400), sizes="100vw",
+        href = sl.get("cta_primary_url") or url_model(sl["model"])
+        pic = picture(sl["image_desktop"], f"{sl['title']} — {_(sl['claim'])}", (1200, 1800, 2400), sizes="100vw",
                       cls="slide-media", img_cls="slide-image", loading="eager" if first else "lazy",
-                      fetchpriority="high" if first else None, mobile=m["hero_mobile"],
+                      fetchpriority="high" if first else None, mobile=sl.get("image_mobile"),
                       decoding="sync" if first else "async")
+        primary = btn(_(sl["cta_primary_label"]).replace("{model}", sl["title"]), href=href, kind="accent")
+        secondary = btn(_("Agendá tu prueba de manejo") if sl.get("cta_secondary_intent", "test-drive") == "test-drive" else _("Contáctanos"), kind="cream",
+                        attrs=f' data-open-contact data-intent="{sl.get("cta_secondary_intent", "test-drive")}" data-model="{sl["title"]}"')
         slides.append(f'''
     <div class="slide{' is-active' if first else ''}" role="group" aria-roledescription="{esc(_("diapositiva"))}" aria-label="{i + 1} / {n}" data-slide{'' if first else ' aria-hidden="true"'}>
       {pic}
       <div class="slide-shade" aria-hidden="true"></div>
       <div class="slide-content">
-        <p class="eyebrow">{_(m['eyebrow'])}</p>
-        <h2 class="slide-title">{m['name']}</h2>
-        <p class="slide-claim">{_(m['claim'])}</p>
+        <p class="eyebrow">{_(sl['eyebrow'])}</p>
+        <h2 class="slide-title">{sl['title']}</h2>
+        <p class="slide-claim">{_(sl['claim'])}</p>
         <div class="slide-actions">
-          {btn(_("Conocé el {model}").replace("{model}", m['name']), href=url_model(key), kind="accent")}
-          {btn(_("Agendá tu prueba de manejo"), kind="cream", attrs=f' data-open-contact data-intent="test-drive" data-model="{m["name"]}"')}
+          {primary}
+          {secondary}
         </div>
       </div>
     </div>''')
-        dots.append(f'<button class="pager-bar{" is-active" if first else ""}" type="button" data-goto="{i}" aria-label="{esc(_("Ir a la diapositiva {n}: {model}").replace("{n}", str(i + 1)).replace("{model}", m["name"]))}"{" aria-current=\"true\"" if first else ""}></button>')
+        dots.append(f'<button class="pager-bar{" is-active" if first else ""}" type="button" data-goto="{i}" aria-label="{esc(_("Ir a la diapositiva {n}: {model}").replace("{n}", str(i + 1)).replace("{model}", sl["title"]))}"{" aria-current=\"true\"" if first else ""}></button>')
     return f'''
 <section class="hero" id="hero" aria-roledescription="{esc(_("carrusel"))}" aria-label="{esc(_("Modelos destacados"))}">
   <div class="hero-track" aria-live="off">{''.join(slides)}
@@ -872,8 +1109,8 @@ def brand_statement():
 <section class="statement" aria-labelledby="stTitle">
   <div class="statement-inner reveal">
     {eyebrow("ZEEKR Paraguay")}
-    <h1 id="stTitle">{_("Vehículos eléctricos premium que reimaginan la forma de moverse.")}</h1>
-    <p>{_("Diseño escandinavo, tecnología de vanguardia y el respaldo del Grupo Geely. ZEEKR llega a Paraguay de la mano de Santa Rosa Paraguay, con los modelos 001, X y 7X.")}</p>
+    <h1 id="stTitle">{_(setting("statement_title", "Vehículos eléctricos premium que reimaginan la forma de moverse."))}</h1>
+    <p>{_(setting("statement_text", "Diseño escandinavo, tecnología de vanguardia y el respaldo del Grupo Geely. ZEEKR llega a Paraguay de la mano de Santa Rosa Paraguay, con los modelos 001, X y 7X."))}</p>
     <a class="text-link" href="{url_section('nosotros')}">{_("Conocé la marca")} {ICON_ARROW}</a>
   </div>
 </section>'''
@@ -905,12 +1142,7 @@ def model_card(key, heading="h2"):
 
 
 def tech_strip():
-    items = [
-        ("Arquitectura SEA", "Plataforma 100 % eléctrica, modular y escalable del Grupo Geely: la base de cada ZEEKR."),
-        ("Actualizaciones OTA", "Software que evoluciona con el tiempo: tu ZEEKR incorpora mejoras de forma remota."),
-        ("Diseño desde Gotemburgo", "Centro global de diseño en Suecia, dirigido por Stefan Sielaff."),
-        ("Seguridad integral", "Estructuras reforzadas y asistencias avanzadas a la conducción en toda la gama."),
-    ]
+    items = [(i["title"], i["text"]) for i in setting("tech_items", [])] or TECH_ITEMS
     lis = "".join(f'<li class="tech-item reveal"><h3>{_(h)}</h3><p>{_(p)}</p></li>' for h, p in items)
     return f'''
 <section class="section tech" aria-labelledby="techTitle">
@@ -942,16 +1174,17 @@ def build_index():
   <div class="news-grid">{news}</div>
   <div class="section-more reveal">{btn(_("Ver todas las noticias"), href=url_section('noticias'), kind="outline-dark")}</div>
 </section>''' + faq_block(HOME_FAQ) + contact_strip()
-    og = og_image(MODELS["7x"]["hero_desktop"], "home")
+    hd, hm = home_hero()
+    og = og_image(hd, "home")
     jsonld = graph(
         {"@type": "ItemList", "name": _("Modelos ZEEKR Paraguay"), "itemListElement": [
             {"@type": "ListItem", "position": i + 1, "name": MODELS[k]["name"], "url": DOMAIN + url_model(k)} for i, k in enumerate(MODEL_ORDER)]},
         faq_schema(HOME_FAQ),
     )
-    render_page(url_home(), _("ZEEKR Paraguay | Vehículos eléctricos premium: 7X, X y 001"),
-                _("Vehículos eléctricos premium ZEEKR en Paraguay: ZEEKR 7X, X y 001. Diseño escandinavo, tecnología líder y autonomía real. Agendá tu prueba de manejo."),
-                content, "", jsonld, og, preload=_derivative(MODELS["7x"]["hero_desktop"], 1800, "webp", False)[0], body_cls="page-home has-hero",
-                preload_mobile=[_derivative(MODELS["7x"]["hero_mobile"], w, "webp", False) for w in (480, 780)], alts=alts)
+    render_page(url_home(), _(setting("seo_title", "ZEEKR Paraguay | Vehículos eléctricos premium: 7X, X y 001")),
+                _(setting("seo_description", "Vehículos eléctricos premium ZEEKR en Paraguay: ZEEKR 7X, X y 001. Diseño escandinavo, tecnología líder y autonomía real. Agendá tu prueba de manejo.")),
+                content, "", jsonld, og, preload=_derivative(hd, 1800, "webp", False)[0], body_cls="page-home has-hero",
+                preload_mobile=[_derivative(hm, w, "webp", False) for w in (480, 780)] if hm else None, alts=alts)
 
 
 # ------------------------------------------------------------------ modelos
@@ -1040,137 +1273,37 @@ def model_meta(m):
     return _(m["meta_title"]), _(m["meta_desc"])
 
 
-def page_7x():
-    m = MODELS["7x"]
-    url = url_model("7x")
-    content = model_hero(m, image="images/hero/7x-desktop.jpg", mobile="images/hero/7x-mobile.jpg") + \
-        sec_features("Explorá lo que hace único al ZEEKR 7X", "Conocé el SUV de próxima generación", [
-            ("Diseño futurista", "Líneas limpias, proporciones elegantes y una presencia que destaca en la ciudad."),
-            ("Cabina Snapdragon 8295", "Respuesta inmediata, controles fluidos y una experiencia digital de primer nivel."),
-            ("Confort de primera clase", "Asientos NAPPA con ventilación, calefacción y masaje para viajar mejor."),
-            ("Seguridad que anticipa", "ADAS avanzado y 7 airbags para manejar con total confianza."),
-            ("0–100 km/h en 3,8 s", "Aceleración contundente y control total, sin sacrificar estabilidad."),
-            ("Sistema de alto voltaje 800 V", "Carga ultrarrápida y gestión térmica eficiente para rendir siempre."),
-        ]) + \
-        sec_video("images/zeekr7x/video-exterior.mp4", "images/zeekr7x/diseno-exterior.jpg", "Exterior", "Presencia que se anticipa", "Proporciones de SUV con la elegancia de un diseño escandinavo: firma lumínica continua, superficies limpias y detalles que hablan de calidad.") + \
-        sec_split("Interior", "Un interior que te hace sentir como en casa", "Asientos tapizados en piel, volante con calefacción y memorias, luz ambiental personalizable y mucho más. La segunda fila suma calefacción, reclinación eléctrica y cortina de privacidad.", "images/zeekr7x/tecnologia-2.jpg", "Interior del ZEEKR 7X con vista al mar", dark=True) + \
-        sec_features("Tecnología", "Tecnología que impulsa el futuro", [
-            ("Procesador Qualcomm 8295", "Chip de 5 nm para una experiencia digital en cabina más rápida y avanzada, líder en su segmento."),
-            ("Sistema interactivo total", "Panel HD de 13″, head-up display AR de 36″ y pantalla central Mini-LED 3.5K de 16″."),
-            ("ZEEKR OTA + App", "Actualizaciones por aire y control remoto del vehículo desde la app, desde cualquier lugar."),
-            ("Batería Qilin 100 kWh", "Autonomía de hasta 543 km WLTP en la versión Performance."),
-            ("Gestión térmica PTM 2.0", "Administra el calor del vehículo y aprovecha mejor la energía para un desempeño eficiente."),
-            ("Arquitectura SEA", "Plataforma nativa eléctrica del Grupo Geely, con cerca de 30 años de experiencia en fabricación de vehículos."),
-        ]) + \
-        sec_split("Seguridad", "Protección integral de 720° para cada pasajero", "Estructura tipo cúpula reforzada, 7 airbags con cortina, trasera de aluminio de una pieza y batería con 10 rejillas capaz de resistir hasta 75 toneladas de impacto lateral.", "images/zeekr7x/generacion-1.jpg", "Vista en corte del ZEEKR 7X con sus airbags desplegados", reverse=True) + \
-        sec_features("Seguridad", "Diseñado para anticiparse", [
-            ("Seguridad activa 360°", "Asistencias avanzadas combinadas con múltiples cámaras, en todo momento."),
-            ("Modo Centinela", "Graba automáticamente la actividad circundante al detectar comportamiento sospechoso, con acceso solo para el propietario."),
-            ("Estructura tipo cúpula", "Absorbe la energía del impacto y protege pasajeros y batería."),
-        ], dark=True) + \
-        sec_gallery("Galería", "Cada detalle, a la vista", [
-            ("images/zeekr7x/apariencia-1.jpg", "ZEEKR 7X, vista trasera en estudio"),
-            ("images/zeekr7x/apariencia-3.jpg", "ZEEKR 7X, vista lateral trasera"),
-            ("images/zeekr7x/apariencia-6.jpg", "Firma lumínica frontal del ZEEKR 7X"),
-            ("images/zeekr7x/diseno-interior-1.jpg", "Cabina del ZEEKR 7X con pantalla central Mini-LED"),
-            ("images/zeekr7x/diseno-interior-2.jpg", "Asientos traseros del ZEEKR 7X"),
-            ("images/zeekr7x/generacion-3.jpg", "Techo panorámico del ZEEKR 7X"),
-            ("images/zeekr7x/lujo-confort.jpg", "Espacio interior del ZEEKR 7X en uso"),
-            ("images/zeekr7x/sentidos-3.jpg", "Cabina del ZEEKR 7X vista desde arriba"),
-        ]) + \
-        sec_compare("Versiones", "Elegí el ZEEKR 7X que se adapta a tu estilo", [
-            ("Smart", "Tu acceso al ZEEKR 7X", [("Autonomía", "480 km (WLTP)"), ("Aceleración 0–100 km/h", "6,0 s"), ("Potencia máxima", "421 HP · RWD"), ("Batería", "75 kWh")]),
-            ("Performance", "La máxima expresión", [("Autonomía", "543 km (WLTP)"), ("Aceleración 0–100 km/h", "3,8 s"), ("Potencia máxima", "646 HP · AWD"), ("Batería", "100 kWh")]),
-        ]) + \
-        sec_compare("Especificaciones", "Dimensiones y garantía", [
-            ("Dimensiones", None, [("Longitud", "4.787 mm"), ("Ancho (incl. espejos)", "1.930 mm"), ("Altura máxima", "1.650 mm"), ("Distancia entre ejes", "2.900 mm")]),
-            ("Garantía", None, [("Vehículo", "5 años o 100.000 km, lo que ocurra primero"), ("Batería", "8 años o 160.000 km, lo que ocurra primero")]),
-        ]) + faq_block(m["faq"], title="Preguntas frecuentes sobre el ZEEKR 7X") + contact_strip(m["name"])
-    og = og_image(m["card"], "zeekr-7x", pos=(0.6, 0.5))
+SECTION_RENDERERS = {
+    "features": lambda s: sec_features(s["kicker"], s["title"], [(i["title"], i["text"]) for i in s.get("items", [])], dark=s.get("dark", False)),
+    "stats": lambda s: sec_stats(s["kicker"], s["title"], [(i["title"], i["text"]) for i in s.get("items", [])], dark=s.get("dark", False)),
+    "split": lambda s: sec_split(s["kicker"], s["title"], s["text"], s["image"], s.get("image_alt") or s["title"], reverse=s.get("reverse", False), dark=s.get("dark", False)),
+    "band": lambda s: sec_band(s["image"], s.get("image_alt") or s["title"], s["kicker"], s["title"], s.get("text") or None, pos=s.get("position", "50% 50%")),
+    "video": lambda s: sec_video(s["video"], s["image"], s["kicker"], s["title"], s["text"]),
+    "gallery": lambda s: sec_gallery(s["kicker"], s["title"], [(g["file"], g["alt"]) for g in s.get("gallery", [])]),
+}
+
+
+def page_model(key):
+    m = MODELS[key]
+    url = url_model(key)
+    content = model_hero(m, image=m["page_hero"], mobile=m.get("page_hero_mobile"))
+    for s in m["sections"]:
+        content += SECTION_RENDERERS[s["type"]](s)
+    if m["versions"]:
+        content += sec_compare("Versiones", m["versions_title"], [(v["name"], v.get("subtitle") or None, [(r["k"], r["v"]) for r in v["rows"]]) for v in m["versions"]])
+    cols = [("Dimensiones", None, [(d["k"], d["v"]) for d in m["dimensions"]])] if m["dimensions"] else []
+    if m["warranty"]:
+        cols.append(("Garantía", None, [(w["k"], w["v"]) for w in m["warranty"]]))
+    if cols:
+        content += sec_compare("Especificaciones", "Dimensiones y garantía" if m["warranty"] else "Dimensiones", cols)
+    content += faq_block(m["faq"], title="Preguntas frecuentes sobre el " + m["name"]) + contact_strip(m["name"])
+    px, py = (float(v.strip("%")) / 100 for v in m["og_pos"].split())
+    og = og_image(m["card"], m["slug"], pos=(px, py))
     title, desc = model_meta(m)
-    render_page(url, title, desc, content, "modelos", model_jsonld("7x", url), og,
-                preload=_derivative("images/hero/7x-desktop.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero",
-                preload_mobile=[_derivative("images/hero/7x-mobile.jpg", w, "webp", False) for w in (480, 780)],
-                alts=alternates(lambda lang: url_model("7x", lang)))
-
-
-def page_x():
-    m = MODELS["x"]
-    url = url_model("x")
-    content = model_hero(m, image="images/zeekrx/exterior-mist-grey.jpg") + \
-        sec_split("El SUV urbano que potencia tu estilo de vida", "Llevando el SUV urbano al siguiente nivel", "El ZEEKR X es un SUV compacto de lujo creado para los estilos de vida urbanos de hoy: el compañero perfecto para aventureros y familias. Líneas atrevidas, tecnología inteligente y máxima comodidad en un solo vehículo.", "images/zeekrx/prestacion1.png", "ZEEKR X circulando por la ciudad") + \
-        sec_stats("Prestaciones", "0–100 km/h en 3,8 s (AWD)", [("428 HP", "Potencia máxima (AWD)"), ("190 km/h", "Velocidad máxima"), ("440 km", "Autonomía WLTP (RWD)"), ("69 kWh", "Batería")], dark=True) + \
-        sec_features("Prestaciones", "Ingeniería para la ciudad", [
-            ("XTCS antideslizante inteligente", "Control de tracción propio de ZEEKR: identifica y controla el derrape en 6 ms, 10 veces más rápido que un TCS tradicional."),
-            ("Techo panorámico doble", "Tragaluz de 1,21 m² con aislamiento térmico y acústico, y barrera UV del 99 %."),
-            ("Seguridad integral", "Vigas anticolisión multicapa de 8 tubos y 7 airbags con protección envolvente de 360°."),
-        ]) + \
-        sec_band("images/zeekrx/interior-charcoal-black-and-golden-trim.jpg", "Interior del ZEEKR X en Charcoal Black con detalles dorados", "Interior", "Cabina inteligente, materiales nobles", "Charcoal Black con acabados dorados, pantalla central y una experiencia digital que evoluciona con actualizaciones OTA.", pos="50% 40%") + \
-        sec_features("Inteligente", "ZEEKR AD y cabina inteligente", [
-            ("Actualizaciones OTA", "Las actualizaciones de software garantizan que tu vehículo esté siempre al día."),
-            ("ZEEKR AD", "5 cámaras HD, 5 radares milimétricos y 12 sensores ultrasónicos con más de 10 funciones de asistencia: crucero adaptativo y estacionamiento."),
-            ("Luces diurnas de doble línea", "56 LED independientes integran DRL, luces laterales e intermitentes en un solo sistema."),
-        ], dark=True) + \
-        sec_gallery("Galería", "El ZEEKR X en detalle", [
-            ("images/zeekrx/caracteristica1.jpg", "Detalle del techo panorámico del ZEEKR X"),
-            ("images/zeekrx/caracteristica3.jpg", "Cabina del ZEEKR X"),
-            ("images/zeekrx/caracteristica4.jpg", "Detalle de la cámara del ZEEKR X"),
-            ("images/zeekrx/inteligente3.png", "Pantalla central del ZEEKR X"),
-            ("images/zeekrx/inteligente4.png", "Sensores de ZEEKR AD"),
-            ("images/zeekrx/prestacion2.png", "ZEEKR X en la ciudad al atardecer"),
-        ]) + \
-        sec_compare("Versiones", "Elegí el ZEEKR X que se adapta a tu estilo", [
-            ("Flagship AWD", "La máxima experiencia ZEEKR", [("Aceleración 0–100 km/h", "3,8 s"), ("Motor", "Doble"), ("Tracción", "All Wheel Drive"), ("Autonomía", "420 km (WLTP)"), ("Potencia", "428 HP"), ("Rines", "Aluminio 20″")]),
-            ("Premium RWD", "Tu acceso a ZEEKR", [("Aceleración 0–100 km/h", "5,6 s"), ("Motor", "Sencillo"), ("Tracción", "Rear Wheel Drive"), ("Autonomía", "440 km (WLTP)"), ("Potencia", "268 HP"), ("Rines", "Aluminio 19″")]),
-        ]) + \
-        sec_compare("Especificaciones", "Dimensiones", [
-            ("Dimensiones", None, [("Longitud", "4.432 mm"), ("Ancho", "1.836 mm"), ("Altura", "1.566 mm"), ("Distancia entre ejes", "2.750 mm")]),
-        ]) + faq_block(m["faq"], title="Preguntas frecuentes sobre el ZEEKR X") + contact_strip(m["name"])
-    og = og_image(m["card"], "zeekr-x")
-    title, desc = model_meta(m)
-    render_page(url, title, desc, content, "modelos", model_jsonld("x", url), og,
-                preload=_derivative("images/zeekrx/exterior-mist-grey.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero",
-                alts=alternates(lambda lang: url_model("x", lang)))
-
-
-def page_001():
-    m = MODELS["001"]
-    url = url_model("001")
-    content = model_hero(m, image="images/zeekr001/exterior-phantom-black.jpg") + \
-        sec_split("El crossover de lujo, reinventado", "El primer deportivo familiar eléctrico puro producido en masa del mundo", "El ZEEKR 001 ofrece algo nuevo para todos. La combinación de elegancia y confort brinda un viaje lujoso para las aventuras de toda la familia.", "images/zeekr001/prestacion1.png", "ZEEKR 001 en ruta de montaña") + \
-        sec_split("Arquitectura SEA", "Tecnología que lleva los vehículos eléctricos más lejos", "Cada ZEEKR se basa en la Arquitectura de Experiencia Sostenible (SEA): una plataforma totalmente eléctrica, modular y escalable que integra las últimas tecnologías. Autonomía de hasta 620 km y carga del 10 % al 80 % en menos de 30 minutos con carga DC de 200 kW.", "images/zeekr001/chasis1.jpg", "Chasis y arquitectura SEA del ZEEKR 001", reverse=True, dark=True) + \
-        sec_stats("Prestaciones", "0–100 km/h en 3,8 s (AWD)", [("536 HP", "Potencia máxima (AWD)"), ("200 km/h", "Velocidad máxima"), ("620 km", "Autonomía WLTP (RWD)"), ("100 kWh", "Batería")]) + \
-        sec_features("Prestaciones", "Potencia con refinamiento", [
-            ("Suspensión neumática automática", "Ajuste de altura en cinco niveles en tiempo real. Disponible en la versión Flagship."),
-            ("Frenos regenerativos", "Aprovechan la energía para recargar la batería mientras manejás."),
-            ("Motores de alto rendimiento", "536 HP, 16.500 rpm de rotación máxima y hasta 97,86 % de eficiencia."),
-        ]) + \
-        sec_band("images/zeekr001/interior-charcoal-black-and-golden-trim.jpg", "Interior del ZEEKR 001 en Charcoal Black con detalles dorados", "Interior", "Lujo digital, materiales de primera", "Acabados premium y tecnología de cabina de última generación, siempre al día gracias a las actualizaciones OTA.", pos="50% 45%") + \
-        sec_features("Inteligente", "Cabina inteligente con OTA", [
-            ("Falcon Eye Vidar", "15 cámaras HD, 7 kits de cámaras de 8 MP, radar de alcance ultralargo de 250 m y 12 sensores ultrasónicos."),
-            ("Interior lujoso", "Materiales de primera calidad y acabados cuidados: tecnología digital de cabina de última generación."),
-            ("Baúl de hasta 2.144 L", "Baúl divisible que puede ampliarse hasta 2.144 litros, para usarlo como quieras."),
-        ], dark=True) + \
-        sec_gallery("Galería", "El ZEEKR 001 en detalle", [
-            ("images/zeekr001/caracteristica1.jpg", "Frente del ZEEKR 001"),
-            ("images/zeekr001/caracteristica2.jpg", "Firma lumínica trasera del ZEEKR 001"),
-            ("images/zeekr001/caracteristica3.jpg", "Cabina digital del ZEEKR 001"),
-            ("images/zeekr001/caracteristica4.jpg", "Baúl del ZEEKR 001 con asientos abatidos"),
-            ("images/zeekr001/inteligente3.jpg", "Interior delantero del ZEEKR 001"),
-            ("images/zeekr001/prestacion3.png", "ZEEKR 001 en movimiento"),
-        ]) + \
-        sec_compare("Versiones", "La máxima experiencia ZEEKR", [
-            ("Flagship AWD", "La máxima expresión", [("Aceleración 0–100 km/h", "3,8 s"), ("Motor", "Doble"), ("Tracción", "All Wheel Drive"), ("Autonomía", "580 km (WLTP)"), ("Potencia", "536 HP"), ("Rines de aluminio", "22″"), ("Suspensión activa", "Sí"), ("Sistema de audio", "Yamaha, 12 parlantes + subwoofer"), ("Asientos con ventilación y masaje", "Sí")]),
-            ("Sport RWD", "Tu acceso al ZEEKR 001", [("Aceleración 0–100 km/h", "7,2 s"), ("Motor", "Sencillo"), ("Tracción", "Rear Wheel Drive"), ("Autonomía", "620 km (WLTP)"), ("Potencia", "268 HP"), ("Rines de aluminio", "21″"), ("Suspensión activa", "No"), ("Sistema de audio", "Yamaha, 12 parlantes + subwoofer"), ("Asientos con ventilación y masaje", "No")]),
-        ]) + \
-        sec_compare("Especificaciones", "Dimensiones", [
-            ("Dimensiones", None, [("Longitud", "4.955 mm"), ("Ancho", "2.005 mm"), ("Altura", "1.560 mm"), ("Distancia entre ejes", "2.999 mm")]),
-        ]) + faq_block(m["faq"], title="Preguntas frecuentes sobre el ZEEKR 001") + contact_strip(m["name"])
-    og = og_image(m["card"], "zeekr-001", pos=(0.6, 0.5))
-    title, desc = model_meta(m)
-    render_page(url, title, desc, content, "modelos", model_jsonld("001", url), og,
-                preload=_derivative("images/zeekr001/exterior-phantom-black.jpg", 1800, "webp", False)[0], body_cls="page-model has-hero",
-                alts=alternates(lambda lang: url_model("001", lang)))
+    render_page(url, title, desc, content, "modelos", model_jsonld(key, url), og,
+                preload=_derivative(m["page_hero"], 1800, "webp", False)[0], body_cls="page-model has-hero",
+                preload_mobile=[_derivative(m["page_hero_mobile"], w, "webp", False) for w in (480, 780)] if m.get("page_hero_mobile") else None,
+                alts=alternates(lambda lang: url_model(key, lang)))
 
 
 def page_modelos():
@@ -1184,7 +1317,7 @@ def page_modelos():
         breadcrumb([(_("Inicio"), url_home()), (_("Modelos"), url)]))
     render_page(url, _("Modelos ZEEKR en Paraguay | 7X, X y 001 — ZEEKR Paraguay"),
                 _("Gama ZEEKR en Paraguay: ZEEKR 7X (SUV de próxima generación), ZEEKR X (SUV urbano premium) y ZEEKR 001 (crossover de lujo). Fichas técnicas y test drive."),
-                content, "modelos", jsonld, og_image("images/hero/7x-desktop.jpg", "modelos"), body_cls="page-list",
+                content, "modelos", jsonld, og_image(home_hero()[0], "modelos"), body_cls="page-list",
                 alts=alternates(lambda lang: url_section("modelos", lang)))
 
 
@@ -1392,9 +1525,8 @@ def build_lang(lang):
     L = lang
     build_index()
     page_modelos()
-    page_7x()
-    page_x()
-    page_001()
+    for k in MODEL_ORDER:
+        page_model(k)
     page_noticias()
     for n in NEWS:
         if n.get("body"):
