@@ -22,6 +22,7 @@ http = httpx.Client(base_url=URL, headers={"Authorization": f"Bearer {TOKEN}"}, 
 MAP_PATH = ROOT / "cms" / "seed_map.json"
 seed_map = json.loads(MAP_PATH.read_text()) if MAP_PATH.exists() else {}
 _folders = {}
+_verified = None   # ids de seed_map confirmados en ESTA instancia; None = todavía no se chequeó (ver _verified_set)
 
 
 def api(method, path, **kw):
@@ -38,13 +39,34 @@ def folder_id(name):
     return _folders[name]
 
 
+def _verified_set():
+    """ids de seed_map que existen de verdad en esta instancia de Directus. Un solo GET masivo (no
+    uno por archivo): si el mapa se generó corriendo el seed contra otra instancia (típicamente local
+    vs. producción — cada Directus tiene su propia base y sus propios ids de /files), esos ids no
+    apuntan a nada acá y SQLite no valida la referencia: quedaría una imagen rota en silencio. Se
+    calcula una sola vez por corrida (global) y se cachea en memoria."""
+    global _verified
+    if _verified is None:
+        ids = sorted(set(seed_map.values()))
+        _verified = set()
+        for i in range(0, len(ids), 200):   # por si el mapa creciera mucho; hoy son ~74
+            chunk = ids[i:i + 200]
+            rows = api("GET", "/files", params={"filter": json.dumps({"id": {"_in": chunk}}), "fields": "id", "limit": -1}) or []
+            _verified.update(r["id"] for r in rows)
+    return _verified
+
+
 def upload(path, focal=None):
-    """Sube (una sola vez) un archivo del repo y fija su punto focal. Devuelve el id de Directus."""
+    """Sube (una sola vez) un archivo del repo y fija su punto focal. Devuelve el id de Directus. Si
+    el id mapeado no existe en esta instancia (ver _verified_set) se resube y se pisa la entrada del
+    mapa, en vez de confiar ciegamente en un id que puede ser de otro Directus."""
     if not path:
         return None
-    if path in seed_map:
-        fid = seed_map[path]
-    else:
+    fid = seed_map.get(path)
+    if fid is not None and fid not in _verified_set():
+        print(f"  ⚠ {path}: id {fid} no existe en esta instancia (mapa de otro Directus) — resubiendo")
+        fid = None
+    if fid is None:
         folder = folder_id("hero" if "/hero/" in path else "noticias" if "/noticias/" in path else "modelos")
         p = ROOT / path
         with open(p, "rb") as fh:
@@ -52,6 +74,7 @@ def upload(path, focal=None):
         if r.status_code >= 400:
             sys.exit(f"upload {path} → {r.status_code}: {r.text[:300]}")
         fid = seed_map[path] = r.json()["data"]["id"]
+        _verified_set().add(fid)   # recién subido a esta instancia: ya cuenta como verificado
         MAP_PATH.write_text(json.dumps(seed_map, indent=1, ensure_ascii=False, sort_keys=True) + "\n")
         print("  ↑", path)
     if focal and focal != "50% 50%":
@@ -100,7 +123,18 @@ def alts(alt):
 
 
 def add_meta(coll, item_id, metas):
+    """Crea sólo las filas de translation_meta que falten para (coll, item_id, campo, idioma). Idempotente
+    a propósito: si el proceso murió a mitad de una corrida anterior, el ítem puede ya existir con sus
+    traducciones puestas pero con algunas (o todas) las filas de translation_meta sin crear todavía — y
+    sync_translations() (builder/translate.py) sólo saltea una traducción existente si hay una fila de
+    meta para ese campo/idioma. Sin este chequeo, una traducción "humana" sin marcar nunca se detecta
+    como faltante pero tampoco se re-traduce (queda congelada): hay texto pero ninguna fila la explica."""
+    if not metas:
+        return
+    have = {(m["field"], m["lang"]) for m in api("GET", "/items/translation_meta", params={"filter": json.dumps({"collection": {"_eq": coll}, "item": {"_eq": str(item_id)}}), "fields": "field,lang", "limit": -1}) or []}
     for field, lang, sh in metas:
+        if (field, lang) in have:
+            continue
         api("POST", "/items/translation_meta", json={"collection": coll, "item": str(item_id), "field": field, "lang": lang, "source_hash": sh, "translated_by": "human", "translated_at": now()})
 
 
@@ -112,8 +146,7 @@ def seed_settings(site_id, c):
     if not st.get("translations"):
         payload["translations"] = rows
     api("PATCH", f"/items/site_settings/{st['id']}", json=payload)
-    if not st.get("translations"):
-        add_meta("site_settings", st["id"], metas)
+    add_meta("site_settings", st["id"], metas)   # idempotente: si ya estaban las traducciones pero faltó marcarlas, esto las completa
 
 
 def model_payload(m, site_id, sort):
@@ -142,15 +175,22 @@ def model_payload(m, site_id, sort):
 
 
 def seed_hero(site_id, c, model_ids):
-    if api("GET", "/items/hero_slides", params={"filter": json.dumps({"site": {"_eq": site_id}}), "limit": 1}):
-        print("hero: ya existe")
-        return
+    """Cada slide se matchea por su posición (sort) dentro del sitio, no por "¿existe algún hero_slide
+    para este sitio?": si el proceso murió a mitad de una corrida anterior con sólo 1 de 3 slides
+    creados, esa condición agregada ya daba verdadero y la corrida siguiente saltaba TODO el hero para
+    siempre, dejándolo incompleto. Acá sólo se crean los sort que falten."""
+    existing = {h["sort"]: h["id"] for h in api("GET", "/items/hero_slides", params={"filter": json.dumps({"site": {"_eq": site_id}}), "fields": "id,sort", "limit": -1}) or []}
     for i, sl in enumerate(c["hero_slides"], 1):
         rows, metas = tr_rows("hero_slides", {k: sl[k] for k in TRANSLATABLE["hero_slides"]})
+        if i in existing:
+            print("hero slide ya existe:", i)
+            add_meta("hero_slides", existing[i], metas)
+            continue
         rows[0]["cta_primary_url"] = sl.get("cta_primary_url", "")
         item = api("POST", "/items/hero_slides", json={"site": site_id, "status": "published", "sort": i, "model": model_ids.get(sl["model"]), "cta_secondary_intent": sl["cta_secondary_intent"],
                                                        "image_desktop": upload(sl["image_desktop"]), "image_mobile": upload(sl.get("image_mobile")), "translations": rows})
         add_meta("hero_slides", item["id"], metas)
+        print("hero slide:", i)
 
 
 def news_payload(n, site_id, model_ids):
@@ -171,31 +211,38 @@ def main():
     seed_settings(sid, c)
     model_ids = {}
     for i, m in enumerate(c["models"], 1):
-        ex = api("GET", "/items/models", params={"filter": json.dumps({"site": {"_eq": sid}, "slug": {"_eq": m["slug"]}}), "fields": "id", "limit": 1})
-        if ex:
-            model_ids[m["key"]] = ex[0]["id"]
-            print("modelo ya existe:", m["slug"])
-            continue
+        # model_payload() siempre se calcula, exista o no el modelo: upload() es idempotente (no
+        # resube lo que ya está mapeado y verificado) y así, si el modelo ya existe pero la corrida
+        # anterior murió antes de completar su translation_meta, igual tenemos los `metas` para
+        # completarlos más abajo — en vez de saltear el modelo entero con un `continue` temprano.
         payload, metas, sec_metas, ver_metas = model_payload(m, sid, i)
-        item = api("POST", "/items/models", params={"fields": "id,sections.id,sections.sort,versions.id,versions.sort"}, json=payload)
-        model_ids[m["key"]] = item["id"]
+        ex = api("GET", "/items/models", params={"filter": json.dumps({"site": {"_eq": sid}, "slug": {"_eq": m["slug"]}}), "fields": "id,sections.id,sections.sort,versions.id,versions.sort", "limit": 1})
+        if ex:
+            item = ex[0]
+            model_ids[m["key"]] = item["id"]
+            print("modelo ya existe:", m["slug"])
+        else:
+            item = api("POST", "/items/models", params={"fields": "id,sections.id,sections.sort,versions.id,versions.sort"}, json=payload)
+            model_ids[m["key"]] = item["id"]
+            print("modelo:", m["slug"])
         add_meta("models", item["id"], metas)
         for s in item["sections"]:
             add_meta("model_sections", s["id"], sec_metas[s["sort"] - 1])
         for v in item["versions"]:
             add_meta("model_versions", v["id"], ver_metas[v["sort"] - 1])
-        print("modelo:", m["slug"])
     print("hero")
     seed_hero(sid, c, model_ids)
     for n in c["news"]:
+        payload, metas = news_payload(n, sid, model_ids)   # mismo motivo que en el loop de modelos: hace falta `metas` incluso si la noticia ya existe
         flt = {"site": {"_eq": sid}, "slug": {"_eq": n["slug"]}} if n["slug"] else {"site": {"_eq": sid}, "date": {"_eq": n["date"]}, "translations": {"title": {"_eq": n["title"]}}}
-        if api("GET", "/items/news", params={"filter": json.dumps(flt), "fields": "id", "limit": 1}):
+        ex = api("GET", "/items/news", params={"filter": json.dumps(flt), "fields": "id", "limit": 1})
+        if ex:
+            item_id = ex[0]["id"]
             print("noticia ya existe:", n["slug"] or n["title"][:40])
-            continue
-        payload, metas = news_payload(n, sid, model_ids)
-        item = api("POST", "/items/news", json=payload)
-        add_meta("news", item["id"], metas)
-        print("noticia:", n["slug"] or n["title"][:40])
+        else:
+            item_id = api("POST", "/items/news", json=payload)["id"]
+            print("noticia:", n["slug"] or n["title"][:40])
+        add_meta("news", item_id, metas)
     print("OK seed;", len(seed_map), "archivos en cms/seed_map.json")
 
 
