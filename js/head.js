@@ -7,6 +7,9 @@ window.__zkGA = function () {
   window.gtag = function () { dataLayer.push(arguments); };
   gtag("js", new Date());
   gtag("config", "G-E6H9ZC5CG3", { anonymize_ip: true });
+  // Propiedad "ZEEKR PY" en la cuenta de marketing@ (sep 2026). La de arriba queda
+  // hasta confirmar que la nueva recibe datos.
+  gtag("config", "G-0QL9QHCG4L", { anonymize_ip: true });
   var s = document.createElement("script");
   s.async = true;
   s.src = "https://www.googletagmanager.com/gtag/js?id=G-E6H9ZC5CG3";
