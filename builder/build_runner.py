@@ -22,9 +22,12 @@ MODES = ("preview", "publish", "rollback")
 SOURCE_DIRS = ("css", "js", "fonts", "icons", "images")
 SOURCE_FILES = ("build_site.py", "i18n.py")
 
-# Un lock por slug, no por modo: preview y publish del mismo sitio comparten el workspace y, además,
-# new_release() borra al empezar los stagings `.tmp-*` huérfanos de ESE sitio — dos builds del mismo
-# sitio en paralelo se pisarían el workspace y el staging del otro. Sitios distintos sí corren a la vez.
+# Un lock por slug, no por modo: desde la ronda 1 preview y publish tienen su propio workspace, pero
+# igual comparten el `releases/` del sitio y el symlink `current`. new_release() borra ahí, al empezar,
+# CUALQUIER staging `.tmp-*` huérfano del sitio sin filtrar por modo, y siempre usa `current` (nunca
+# `preview`) como --link-dest; prune() también recorre ese mismo `releases/` para las dos clases de
+# release. Dos builds del mismo sitio en paralelo (publish + preview, o dos publish) se pisarían el
+# staging o el prune del otro. Sitios distintos (carpetas separadas bajo sites_root) sí corren a la vez.
 _LOCKS, _LOCKS_GUARD = {}, threading.Lock()
 
 
