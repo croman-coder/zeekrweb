@@ -1526,7 +1526,8 @@ def build_meta():
         sm.append(f"  <url>\n    <loc>{DOMAIN}{path}</loc>\n    <lastmod>{lastmod}</lastmod>{links}\n  </url>")
     sm.append("</urlset>")
     open("sitemap.xml", "w").write("\n".join(sm) + "\n")
-    open("robots.txt", "w").write(f"User-agent: *\nAllow: /\nDisallow: /404.html\n\nSitemap: {DOMAIN}/sitemap.xml\n")
+    # /cms/ (panel Directus) y /admin (atajo que redirige al panel) no se rastrean
+    open("robots.txt", "w").write(f"User-agent: *\nAllow: /\nDisallow: /404.html\nDisallow: /cms/\nDisallow: /admin\n\nSitemap: {DOMAIN}/sitemap.xml\n")
     # Cloudflare Pages / Netlify: mismas redirecciones y cabeceras que nginx.conf
     legacy = [("/index.html", "/"), ("/zeekr001.html", "/modelos/zeekr-001/"), ("/zeekrx.html", "/modelos/zeekr-x/"),
               ("/zeekr7x.html", "/modelos/zeekr-7x/"), ("/noticias.html", "/noticias/"), ("/nosotros.html", "/nosotros/")]
