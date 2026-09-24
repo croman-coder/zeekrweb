@@ -137,6 +137,14 @@ def build_content(raw):
     ts = tr(st)
     by_id = {m["id"]: model_key(m) for m in raw["models"]}
     models = [model(m, warnings) for m in sort_rows(raw["models"])]
+    if not models:
+        # home_hero() del generador hace MODEL_ORDER[0]: sin modelos revienta con IndexError en vez de avisar.
+        raise ValueError("No hay ningún modelo publicado: publicá al menos uno antes de generar el sitio.")
+    for m in models:
+        if not m["menu_image"]:
+            # sin menu_image el generador cae al literal images/menu/zeekr_<key>.png, que solo existe
+            # para los tres modelos actuales: un modelo nuevo revienta el build con FileNotFoundError.
+            raise ValueError(f"El modelo «{m['name']}» no tiene imagen de menú (menu_image): subila en Directus antes de publicar.")
     slides = []
     for h in sort_rows(raw["hero_slides"]):
         d = hero_slide(h, by_id)

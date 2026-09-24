@@ -59,3 +59,18 @@ def test_missing_phones_raises(raw):
     raw["settings"]["phones"] = []
     with pytest.raises(ValueError):
         T.build_content(raw)
+
+
+def test_no_published_models_raises_a_clear_error(raw):
+    """Sin esto home_hero() del generador revienta con IndexError: MODEL_ORDER[0] (Preocupación 10)."""
+    raw["models"] = []
+    with pytest.raises(ValueError, match="ningún modelo"):
+        T.build_content(raw)
+
+
+def test_model_without_menu_image_raises_a_clear_error(raw):
+    """Sin esto el generador cae al literal images/menu/zeekr_<key>.png, que solo existe para los tres
+    modelos actuales, y un modelo nuevo sin menu_image revienta el build con FileNotFoundError (Preocupación 11)."""
+    raw["models"][0]["menu_image"] = None
+    with pytest.raises(ValueError, match="ZEEKR 7X.*menu_image"):
+        T.build_content(raw)
