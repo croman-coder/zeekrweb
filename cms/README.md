@@ -14,8 +14,10 @@
   páginas. En `/cms/admin/` la API queda en `/cms/`.
 - `/cms/` lleva su propia CSP (la de Directus; la del sitio le rompería el panel), `X-Robots-Tag: noindex`, y
   `robots.txt` excluye `/cms/` y `/admin`.
-- `admin.santarosa.lat` sigue apuntando a la misma app (fqdn en Coolify), pero con `PUBLIC_URL` en `/cms` la
-  interfaz ahí **no carga** (pide sus archivos en `/cms/admin/…`); solo responde la API. No usarlo.
+- La app 18 **no tiene dominio propio** en Coolify (fqdn vacío, sin etiquetas de Traefik): solo se llega por
+  `zeekrlife.com.py/cms` o, dentro de la red `coolify`, por `http://directus:8055` (el builder).
+- `admin.santarosa.lat` (primer dominio del panel) está en el fqdn de la app 16 y su nginx responde **302 a
+  https://zeekrlife.com.py/admin** en cualquier ruta (server block propio al final de `nginx.conf`).
 
 ## App en Coolify
 
@@ -25,6 +27,10 @@
 - Variables: ver `directus.env.example` (los valores reales viven solo en Coolify). Se cambian con tinker
   pasando los valores por archivo temporal (nunca en la línea de comando) y se redespliega la app 18.
 - **Sin SMTP todavía** (`EMAIL_*` sin cargar): el panel no manda mails de recuperar contraseña ni invitaciones.
+- Cookies de sesión y refresh con `Secure` y `SameSite=Lax` (`SESSION_COOKIE_SECURE`, `REFRESH_TOKEN_COOKIE_SECURE`,
+  `*_SAME_SITE`). Si alguna vez se prueba por http plano, el navegador no las guarda.
+- Idioma: Directus **no lee** `DEFAULT_LANGUAGE`; el idioma del login y de los usuarios sin idioma propio es
+  `default_language` de `/settings` (Configuración → Proyecto), fijado en `es-ES`.
 
 ## Credenciales (nunca en git)
 
