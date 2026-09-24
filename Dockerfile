@@ -1,13 +1,18 @@
 FROM nginx:1.27-alpine
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# El sitio sale del volumen zeekr_sites (/srv/sites/zeekr/current, lo que publica el panel). Esta copia del
+# repo queda en la imagen como red de seguridad: nginx la usa para lo que no esté en la release (URLs
+# viejas de imágenes) y entera si el volumen no está montado o todavía no hay publicación. Ver nginx.conf.
 COPY . /usr/share/nginx/html
 
-# Fuentes del generador y snapshots no se sirven
+# Fuentes del generador, del builder y del panel, y snapshots: no se sirven
 RUN rm -f /usr/share/nginx/html/build_site.py /usr/share/nginx/html/Dockerfile /usr/share/nginx/html/nginx.conf \
     /usr/share/nginx/html/.dockerignore /usr/share/nginx/html/_headers /usr/share/nginx/html/_redirects \
     && rm -rf /usr/share/nginx/html/.git /usr/share/nginx/html/.claude /usr/share/nginx/html/www_zeekrlife_com*.html \
-    /usr/share/nginx/html/api /usr/share/nginx/html/functions
+    /usr/share/nginx/html/api /usr/share/nginx/html/functions \
+    /usr/share/nginx/html/builder /usr/share/nginx/html/cms /usr/share/nginx/html/scripts /usr/share/nginx/html/content
 
 EXPOSE 80
 
