@@ -11,7 +11,9 @@ TOKEN = os.environ.get("DIRECTUS_ADMIN_TOKEN") or sys.exit("falta DIRECTUS_ADMIN
 
 def api(method, path, body=None, ok404=False, raw=False):
     data = json.dumps(body).encode() if body is not None else None
-    headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
+    # User-Agent propio: el panel de producción (zeekrlife.com.py/cms) está detrás de Cloudflare y su
+    # Browser Integrity Check rechaza el "Python-urllib/x" por defecto (HTTP 403, error code 1010).
+    headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json", "User-Agent": "zeekr-cms-setup/1.0"}
     if os.environ.get("CF_ACCESS_CLIENT_ID"):  # si admin.santarosa.lat está detrás de Cloudflare Access (service token)
         headers |= {"CF-Access-Client-Id": os.environ["CF_ACCESS_CLIENT_ID"], "CF-Access-Client-Secret": os.environ["CF_ACCESS_CLIENT_SECRET"]}
     req = urllib.request.Request(f"{URL}{path}", method=method, data=data, headers=headers)
