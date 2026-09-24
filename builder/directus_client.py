@@ -1,46 +1,71 @@
 # builder/directus_client.py — acceso a Directus (REST): contenido, archivos, builds y traducciones.
 import json
+import time
 from pathlib import Path
 
 import httpx
 
 from .transform import file_path
 
+# Directus limita los pedidos por IP (RATE_LIMITER_*; en producción 50 por segundo). Por la red interna el
+# builder los supera fácil —bajar ~75 originales seguidos— y recibe 429. En vez de fallar el build se espera
+# lo que pide `Retry-After` (o un backoff creciente si no viene o viene en 0) y se reintenta, con tope.
+MAX_RETRIES = 8
+MAX_WAIT = 10.0
+
 MODEL_FIELDS = ("*,translations.*,hero_image.*,hero_image_mobile.*,card_image.*,menu_image.*,pdf.*,versions.*,versions.translations.*,"
                 "sections.*,sections.translations.*,sections.image.*,sections.video.*,sections.gallery.*,sections.gallery.file.*")
 
 
 class Directus:
-    def __init__(self, url, token, timeout=120, transport=None):
+    def __init__(self, url, token, timeout=120, transport=None, sleep=time.sleep):
         self.http = httpx.Client(base_url=url.rstrip("/"), headers={"Authorization": f"Bearer {token}"}, timeout=timeout, transport=transport)
+        self.sleep = sleep                   # inyectable: los tests no esperan de verdad
+
+    @staticmethod
+    def _wait(r, attempt):
+        """Segundos a esperar tras un 429: Retry-After si es útil; si no, 0.5, 1, 2, 4… (tope MAX_WAIT)."""
+        try:
+            retry_after = float(r.headers.get("retry-after") or 0)
+        except ValueError:                   # Retry-After también puede venir como fecha HTTP: se ignora
+            retry_after = 0
+        return min(max(retry_after, 0.5 * 2 ** attempt), MAX_WAIT)
+
+    def _request(self, method, path, **kw):
+        for attempt in range(MAX_RETRIES + 1):
+            r = self.http.request(method, path, **kw)
+            if r.status_code != 429 or attempt == MAX_RETRIES:
+                r.raise_for_status()
+                return r
+            self.sleep(self._wait(r, attempt))
 
     def get(self, path, **params):
-        r = self.http.get(path, params=params)
-        r.raise_for_status()
-        return r.json().get("data")
+        return self._request("GET", path, params=params).json().get("data")
 
     def items(self, coll, **params):
         return self.get(f"/items/{coll}", limit=-1, **params) or []
 
     def create(self, coll, data):
-        r = self.http.post(f"/items/{coll}", json=data)
-        r.raise_for_status()
-        return r.json()["data"]
+        return self._request("POST", f"/items/{coll}", json=data).json()["data"]
 
     def update(self, coll, id_, data):
-        r = self.http.patch(f"/items/{coll}/{id_}", json=data)
-        r.raise_for_status()
-        return r.json()["data"]
+        return self._request("PATCH", f"/items/{coll}/{id_}", json=data).json()["data"]
 
     def download(self, file_id, dest):
         dest = Path(dest)
         dest.parent.mkdir(parents=True, exist_ok=True)
         tmp = dest.with_name(dest.name + ".part")
-        with self.http.stream("GET", f"/assets/{file_id}", params={"download": ""}) as r:
-            r.raise_for_status()
-            with open(tmp, "wb") as fh:
-                for chunk in r.iter_bytes(1 << 20):
-                    fh.write(chunk)
+        for attempt in range(MAX_RETRIES + 1):
+            with self.http.stream("GET", f"/assets/{file_id}", params={"download": ""}) as r:
+                if r.status_code == 429 and attempt < MAX_RETRIES:
+                    wait = self._wait(r, attempt)
+                else:
+                    r.raise_for_status()
+                    with open(tmp, "wb") as fh:
+                        for chunk in r.iter_bytes(1 << 20):
+                            fh.write(chunk)
+                    break
+            self.sleep(wait)                 # fuera del `with`: la conexión ya se devolvió al pool
         tmp.replace(dest)
 
 

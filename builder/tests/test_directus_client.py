@@ -161,3 +161,61 @@ def test_create_update():
     dx = make(handler)
     assert dx.create("builds", {"mode": "publish"})["id"] == 3
     assert dx.update("builds", 3, {"status": "success"})["status"] == "success"
+
+
+# ---- límite de pedidos de Directus (RATE_LIMITER_*: en producción 50 pedidos por segundo por IP) ----
+# El builder habla con Directus por la red interna: bajar ~75 originales seguidos supera el límite y Directus
+# responde 429. Eso no puede tumbar el build (ni dejar la fila de `builds` en `running` porque el PATCH final
+# también rebotó): se espera lo que pide `Retry-After` (o un backoff) y se reintenta.
+
+def limited(ok, fails=2, retry_after="1"):
+    """Handler que responde 429 las primeras `fails` veces para cada (método, ruta) y después delega en `ok`."""
+    seen = {}
+
+    def handler(req):
+        k = (req.method, req.url.path)
+        seen[k] = seen.get(k, 0) + 1
+        if seen[k] <= fails:
+            return httpx.Response(429, headers={"Retry-After": retry_after} if retry_after is not None else {},
+                                  json={"errors": [{"message": "Too many requests"}]})
+        return ok(req)
+    return handler, seen
+
+
+def make_limited(handler, sleeps):
+    return D.Directus("https://cms.test", "tok", transport=httpx.MockTransport(handler), sleep=sleeps.append)
+
+
+def test_429_on_get_create_update_is_retried_honoring_retry_after():
+    def ok(req):
+        return httpx.Response(200, json={"data": {"id": 1}})
+    handler, seen = limited(ok, fails=2, retry_after="1")
+    sleeps = []
+    dx = make_limited(handler, sleeps)
+    assert dx.get("/items/sites/1") == {"id": 1}
+    assert dx.create("builds", {"mode": "publish"}) == {"id": 1}
+    assert dx.update("builds", 1, {"status": "error"}) == {"id": 1}
+    assert seen == {("GET", "/items/sites/1"): 3, ("POST", "/items/builds"): 3, ("PATCH", "/items/builds/1"): 3}
+    assert len(sleeps) == 6 and all(s >= 1 for s in sleeps)
+
+
+def test_429_on_download_is_retried_and_writes_the_file(tmp_path):
+    handler, seen = limited(lambda req: httpx.Response(200, content=b"12345"), fails=3, retry_after=None)
+    sleeps = []
+    f = {"id": "abc", "filename_download": "a.jpg", "filesize": 5}
+    assert D.sync_files(make_limited(handler, sleeps), {"models": [{"hero_image": f}]}, tmp_path, log=lambda m: None) == 1
+    assert (tmp_path / "images/cms/abc.jpg").read_bytes() == b"12345"
+    assert not (tmp_path / "images/cms/abc.jpg.part").exists()
+    assert seen[("GET", "/assets/abc")] == 4
+    assert len(sleeps) == 3 and all(s > 0 for s in sleeps)          # sin Retry-After: backoff creciente, nunca 0
+    assert sleeps == sorted(sleeps)
+
+
+def test_429_forever_ends_in_http_error_without_sleeping_forever():
+    handler, seen = limited(lambda req: httpx.Response(200, json={"data": {}}), fails=10**6, retry_after="0")
+    sleeps = []
+    with pytest.raises(httpx.HTTPStatusError) as e:
+        make_limited(handler, sleeps).get("/items/sites/1")
+    assert e.value.response.status_code == 429
+    assert seen[("GET", "/items/sites/1")] == D.MAX_RETRIES + 1
+    assert sum(sleeps) <= 60                                          # acotado: un Directus caído no cuelga el build
