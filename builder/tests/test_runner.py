@@ -94,6 +94,21 @@ def test_error_keeps_previous_release(tmp_path, monkeypatch):
     assert P.target(Path(s.sites_root) / "zeekr" / "current") == cur
 
 
+def test_without_anthropic_key_the_build_publishes_in_spanish_with_a_warning(tmp_path, monkeypatch):
+    # Producción arranca sin ANTHROPIC_API_KEY: el build no puede fallar ni intentar llamar a Claude;
+    # deja el aviso en el log y lo que no esté traducido sale en español (fallback de `_()` del generador).
+    s, dx = settings(tmp_path), FakeDx()
+    patch_steps(monkeypatch)
+
+    def no_translation(*a, **k):
+        raise AssertionError("sin clave no se tiene que traducir")
+    monkeypatch.setattr(R, "sync_translations", no_translation)
+    monkeypatch.setattr(R, "Claude", no_translation)
+    row = R.run({"site_settings_id": 1, "mode": "publish"}, s, dx=dx, log=R.Log())
+    assert row["status"] == "success" and row["release"]
+    assert "sin ANTHROPIC_API_KEY: no se traduce (donde falte se usa español)" in row["log"]
+
+
 def test_rollback_without_previous_is_error(tmp_path, monkeypatch):
     s, dx = settings(tmp_path), FakeDx()
     patch_steps(monkeypatch)
