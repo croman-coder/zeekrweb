@@ -1298,7 +1298,7 @@ def sec_video(src, poster, kicker, title, text):
 
 def model_jsonld(key, url):
     m = MODELS[key]
-    car = {"@type": ["Product", "Car"], "name": m["name"], "brand": {"@type": "Brand", "name": "ZEEKR"},
+    car = {"@type": "Car", "name": m["name"], "brand": {"@type": "Brand", "name": "ZEEKR"},
            "manufacturer": {"@type": "Organization", "name": "ZEEKR"},
            "model": m["short"], "vehicleConfiguration": _(m["tagline"]), "fuelType": "Electric",
            "description": _(m["schema_desc"]), "url": DOMAIN + url,
@@ -1508,6 +1508,14 @@ def page_404():
 
 
 # ------------------------------------------------------------------ sitemap / robots
+# URLs del sitio anterior (DreamHost, PHP) que Google tenía indexadas → equivalentes nuevas (301).
+# politica.php queda en 404 hasta que exista una página de política de privacidad.
+LEGACY_PHP = [("/index.php", "/"), ("/zeekr001.php", "/modelos/zeekr-001/"), ("/zeekrx.php", "/modelos/zeekr-x/"),
+              ("/zeekr7x.php", "/modelos/zeekr-7x/"), ("/noticias.php", "/noticias/"), ("/nosotros.php", "/nosotros/")] + [
+    (f"/{n}.php", "/noticias/") for n in ("asociacion-qualcomm", "audio-premium", "ces-2025", "diferencias-traccion", "luces-inteligentes",
+                                          "noticia1", "noticia2", "revolucion-electrica", "suvelectrico")]
+
+
 def build_meta():
     sm = ['<?xml version="1.0" encoding="UTF-8"?>',
           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">']
@@ -1522,6 +1530,7 @@ def build_meta():
     # Cloudflare Pages / Netlify: mismas redirecciones y cabeceras que nginx.conf
     legacy = [("/index.html", "/"), ("/zeekr001.html", "/modelos/zeekr-001/"), ("/zeekrx.html", "/modelos/zeekr-x/"),
               ("/zeekr7x.html", "/modelos/zeekr-7x/"), ("/noticias.html", "/noticias/"), ("/nosotros.html", "/nosotros/")]
+    legacy += LEGACY_PHP
     lines = [f"{a} {b} 301" for a, b in legacy] + [f"https://www.{DOMAIN.split('//')[1]}/* {DOMAIN}/:splat 301"]
     open("_redirects", "w").write("\n".join(lines) + "\n")
     sec = ["  X-Content-Type-Options: nosniff", "  X-Frame-Options: SAMEORIGIN",
