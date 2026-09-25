@@ -40,8 +40,27 @@
     if (doc.prerendering) doc.addEventListener("prerenderingchange", function () { statHit("view"); }, { once: true });
     else statHit("view");
   }
+  /* ----- píxel de Meta: eventos (lo carga head.js solo con consentimiento; sin fbq, no hace nada) ----- */
+  function fbTrack(ev, params) {
+    if (typeof window.fbq !== "function") return;
+    try { window.fbq("track", ev, params); } catch (e) { /* un bloqueador nunca rompe la página */ }
+  }
+  /* Modelo de la página: el nodo Car de primer nivel del JSON-LD (solo lo tienen las páginas de modelo,
+     en los 4 idiomas; el nombre es igual en todos: "ZEEKR 7X"). */
+  var pageModel = null;
+  $$('script[type="application/ld+json"]').forEach(function (s) {
+    try {
+      var d = JSON.parse(s.textContent || "{}");
+      (d["@graph"] || [d]).forEach(function (n) {
+        var t = [].concat(n["@type"]);
+        if (!pageModel && t.indexOf("Car") !== -1 && n.name) pageModel = String(n.name);
+      });
+    } catch (e) { /* JSON-LD ilegible: sin ViewContent */ }
+  });
+  function fbViewContent() { if (pageModel) fbTrack("ViewContent", { content_name: pageModel, content_category: "ZEEKR" }); }
+  fbViewContent();
   doc.addEventListener("click", function (e) {
-    if (e.target.closest && e.target.closest('a[href*="wa.me/"], a[href*="whatsapp.com/"]')) statHit("whatsapp");
+    if (e.target.closest && e.target.closest('a[href*="wa.me/"], a[href*="whatsapp.com/"]')) { statHit("whatsapp"); fbTrack("Contact"); }
   }, true);
 
   /* ----- header: fondo al scrollear ----- */
@@ -94,7 +113,7 @@
     burger.focus();
   }
 
-  /* ----- cookies / consentimiento (carga GA solo con permiso) ----- */
+  /* ----- cookies / consentimiento (carga GA y el píxel de Meta solo con permiso) ----- */
   var banner = $("#cookieBanner");
   var ckSettings = $("#cookieSettings");
   var CK_KEY = "zeekr-consent";
@@ -103,6 +122,7 @@
     try { localStorage.setItem(CK_KEY, JSON.stringify({ necessary: true, analytics: !!analytics, at: Date.now() })); } catch (e) { /* sin storage: no persiste */ }
     if (banner) banner.hidden = true;
     if (analytics && window.__zkGA) window.__zkGA();
+    if (analytics && window.__zkFB && window.__zkFB()) fbViewContent();  // aceptó recién, en una página de modelo
   }
   if (banner && !readConsent()) banner.hidden = false;
 
@@ -252,6 +272,7 @@
         clearTimeout(t);
         if (!res.ok) throw new Error(res.data && res.data.detail ? String(res.data.detail) : "error");
         if (window.gtag) window.gtag("event", "generate_lead", { method: "web_form", model: payload.modelo });
+        fbTrack("Lead", { content_name: payload.tipo });  // solo con el lead registrado (no en el respaldo a WhatsApp)
         showSuccess(form, res.data, wa);
       })
       .catch(function () {
