@@ -29,6 +29,21 @@
   }
   function lockScroll(on) { doc.documentElement.style.overflow = on ? "hidden" : ""; }
 
+  /* ----- estadísticas propias → /api/hit (sin cookies, sin IDs, sin datos personales) -----
+     Una visita por página cargada y un clic por enlace a WhatsApp. Solo desde zeekrlife.com.py: el alias
+     zeekr.santarosa.lat y la vista previa no cuentan. Las 404 tampoco. Nunca rompe la página. */
+  function statHit(kind) {
+    if (location.hostname !== "zeekrlife.com.py" || !navigator.sendBeacon) return;
+    try { navigator.sendBeacon("/api/hit", JSON.stringify({ k: kind, p: location.pathname, t: doc.title })); } catch (e) { /* sin estadística */ }
+  }
+  if (!$(".notfound")) {
+    if (doc.prerendering) doc.addEventListener("prerenderingchange", function () { statHit("view"); }, { once: true });
+    else statHit("view");
+  }
+  doc.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest('a[href*="wa.me/"], a[href*="whatsapp.com/"]')) statHit("whatsapp");
+  }, true);
+
   /* ----- header: fondo al scrollear ----- */
   var header = $("#siteHeader");
   var scrolled = false;
