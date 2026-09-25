@@ -8,6 +8,9 @@
  *
  * env: BITRIX_WEBHOOK_URL (obligatoria) · ZEEKR_DEPARTMENT_ID=29 · LEAD_SOURCE_ID=WEB_SR_ZEEKR
  *      BRAND_FIELD=UF_CRM_1775591500778 · BRAND_VALUE=301 · FALLBACK_ASSIGNEE_ID=73 · ADVISOR_IDS="139,2171"
+ *
+ * Estadísticas: handle() recibe opcionalmente { stats } (functions/_lib/stats.js, solo en el servidor Node)
+ * y cuenta un "lead" por cada lead creado en Bitrix. Sin stats (Cloudflare Pages) todo sigue igual.
  */
 const SITE = "zeekrlife.com.py";
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
@@ -140,8 +143,8 @@ export async function createLead(body, env) {
   return { ok: true, leadId, asesor: advisor.name ? advisor.name.split(" ")[0].replace(/^(.)(.*)$/, (m, a, b) => a + b.toLowerCase()) : null };
 }
 
-/** Manejador HTTP común (Request → Response, estándar Fetch). */
-export async function handle(request, env) {
+/** Manejador HTTP común (Request → Response, estándar Fetch). ctx.stats: contador opcional (stats.js). */
+export async function handle(request, env, { stats } = {}) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "");
   const json = (status, obj) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
@@ -153,7 +156,10 @@ export async function handle(request, env) {
   try { body = await request.json(); } catch { return json(400, { ok: false, detail: "JSON inválido" }); }
   try {
     const result = await createLead(body, env);
-    if (result.leadId) console.log(`lead ${result.leadId} → ${result.asesor} ip=${ip}`);
+    if (result.leadId) {
+      console.log(`lead ${result.leadId} → ${result.asesor} ip=${ip}`);
+      try { if (stats) stats.lead(body); } catch (e) { console.error("estadísticas (lead):", e.message); }
+    }
     return json(200, result);
   } catch (e) {
     console.error("lead error:", e.message);
