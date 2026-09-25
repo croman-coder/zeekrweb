@@ -224,6 +224,8 @@ Dataset "Zeekr Paraguay" (`1384147742910671`). Qué hace y variables: `api/READM
   navegador bloquea el píxel (el resto del sitio anda igual).
 - **API de conversiones (app 17):** cargar `META_CAPI_TOKEN` (valor solo en Coolify, por archivo temporal + tinker como
   las demás) y redesplegar la app 17 (`name` = `zeekr-leads-api`). Arranque: `meta capi: activada (píxel …)`.
+  **Recién después de Publicar:** las páginas de antes no mandan el consentimiento (`meta`) y sus formularios irían a
+  Meta aunque el visitante haya rechazado las cookies.
 - **Probar:** Administrador de eventos → "Zeekr Paraguay" → Probar eventos. El píxel manda `PageView`, `Contact` y `Lead`
   solo desde zeekrlife.com.py con las cookies aceptadas (la vista previa y el alias no mandan nada). Para ver el `Lead`
   del servidor ahí, cargar también `META_TEST_EVENT_CODE` en la app 17 y sacarlo después; cada prueba crea un lead
