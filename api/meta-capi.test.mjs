@@ -1,10 +1,12 @@
-// Tests de la API de conversiones de Meta (functions/_lib/meta-capi.js) y de cómo la llama lead.js.
-// Sin dependencias: node --test api/
+// Tests de la API de conversiones de Meta (functions/_lib/meta-capi.js), de cómo la llama lead.js y de la carga
+// del píxel en js/head.js (permiso, host e ID). Sin dependencias: node --test api/
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
 import {
-  META_PIXEL_ID, GRAPH_VERSION, normalizarTelefono, sha256, eventIdValido, cookieFbValida, urlDelSitio,
+  META_PIXEL_ID, META_HOSTS, GRAPH_VERSION, normalizarTelefono, sha256, eventIdValido, cookieFbValida, urlDelSitio,
   ipDelCliente, armarEventoLead, motivoParaNoEnviar, enviarLeadMeta,
 } from "../functions/_lib/meta-capi.js";
 import { handle } from "../functions/_lib/lead.js";
@@ -284,5 +286,69 @@ describe("lead.js manda el Lead a Meta cuando Bitrix lo crea", () => {
       soltar(new Response(JSON.stringify({ events_received: 1 })));
       await new Promise((r) => setTimeout(r, 10));
     }, { graph: () => { llamadas++; return pendiente; } })();
+  });
+});
+
+describe("js/head.js: el píxel solo carga con permiso, en zeekrlife.com.py y con ID", () => {
+  const HEAD = readFileSync(new URL("../js/head.js", import.meta.url), "utf8");
+
+  test("el ID y los hosts coinciden con los de la API de conversiones", () => {
+    assert.match(HEAD, new RegExp(`var META_PIXEL_ID = "${META_PIXEL_ID}";`));
+    assert.match(HEAD, new RegExp(`var META_HOSTS = ${JSON.stringify(META_HOSTS).replace(/[[\]]/g, "\\$&")};`));
+  });
+
+  /** Ejecuta head.js en un navegador mínimo y devuelve lo que cargó. */
+  function correr({ consent = null, host = "zeekrlife.com.py", source = HEAD } = {}) {
+    const scripts = [];
+    const store = consent === null ? {} : { "zeekr-consent": JSON.stringify(consent) };
+    const win = {
+      location: { hostname: host },
+      localStorage: { getItem: (k) => (k in store ? store[k] : null) },
+      document: {
+        documentElement: { classList: { add() {} } },
+        createElement: () => ({}),
+        head: { appendChild: (s) => scripts.push(s.src) },
+      },
+      Date,
+      JSON,
+    };
+    win.window = win;
+    vm.runInNewContext(source, win);
+    return { win, scripts };
+  }
+  const PIXEL = "https://connect.facebook.net/en_US/fbevents.js";
+
+  test("con analíticas aceptadas en zeekrlife.com.py: carga GA y el píxel (init + PageView)", () => {
+    const { win, scripts } = correr({ consent: { necessary: true, analytics: true } });
+    assert.deepEqual(scripts, ["https://www.googletagmanager.com/gtag/js?id=G-E6H9ZC5CG3", PIXEL]);
+    assert.deepEqual(Array.from(win.fbq.queue, (a) => [...a]), [["init", META_PIXEL_ID], ["track", "PageView"]]);
+    win.__zkMeta();
+    assert.equal(scripts.filter((s) => s === PIXEL).length, 1, "una sola vez");
+  });
+
+  test("sin decisión o con rechazo no carga nada; si acepta después (banner), carga en ese momento", () => {
+    for (const consent of [null, { necessary: true, analytics: false }]) {
+      const { win, scripts } = correr({ consent });
+      assert.deepEqual(scripts, []);
+      assert.equal(win.fbq, undefined);
+      win.__zkGA(); win.__zkMeta();   // lo que hace saveConsent(true) en main.js
+      assert.deepEqual(scripts, ["https://www.googletagmanager.com/gtag/js?id=G-E6H9ZC5CG3", PIXEL]);
+    }
+  });
+
+  test("en el alias, la vista previa o localhost no carga el píxel (GA sigue igual que antes)", () => {
+    for (const host of ["zeekr.santarosa.lat", "preview-zeekr.santarosa.lat", "localhost", "www.zeekrlife.com.py"]) {
+      const { win, scripts } = correr({ consent: { analytics: true }, host });
+      assert.deepEqual(scripts, ["https://www.googletagmanager.com/gtag/js?id=G-E6H9ZC5CG3"], host);
+      assert.equal(win.fbq, undefined, host);
+    }
+  });
+
+  test("con META_PIXEL_ID vacío no carga nada de Meta", () => {
+    const source = HEAD.replace(`var META_PIXEL_ID = "${META_PIXEL_ID}";`, 'var META_PIXEL_ID = "";');
+    assert.notEqual(source, HEAD);
+    const { win, scripts } = correr({ consent: { analytics: true }, source });
+    assert.equal(scripts.includes(PIXEL), false);
+    assert.equal(win.fbq, undefined);
   });
 });

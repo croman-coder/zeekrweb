@@ -40,8 +40,39 @@
     if (doc.prerendering) doc.addEventListener("prerenderingchange", function () { statHit("view"); }, { once: true });
     else statHit("view");
   }
+
+  /* ----- píxel de Meta: js/head.js lo carga solo con permiso y en zeekrlife.com.py; sin píxel esto no hace nada ----- */
+  function newEventId() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) { /* sin randomUUID */ }
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+  function metaTrack(name, params, eventId) {
+    if (typeof window.fbq !== "function") return;
+    try { window.fbq("track", name, params, { eventID: eventId || newEventId() }); } catch (e) { /* sin píxel */ }
+  }
+  /* Contacto = enlace a un número (wa.me/<número>, …whatsapp.com/send?phone=…). Compartir una noticia
+     (wa.me/?text=…) también cuenta como clic a WhatsApp en las estadísticas, pero no es un contacto. */
+  function waContact(a) {
+    try {
+      var u = new URL(a.href, location.href);
+      if (u.hostname === "wa.me") return u.pathname.replace(/\//g, "") !== "";
+      if (/(^|\.)whatsapp\.com$/.test(u.hostname) && /^\/send\/?$/.test(u.pathname)) return !!u.searchParams.get("phone");
+    } catch (e) { /* href inválido */ }
+    return false;
+  }
+  function waPlace(a) {
+    if (a.hasAttribute("data-success-wa")) return "form_success";
+    if (a.closest("#contactModal")) return "contact_modal";
+    if (a.closest(".site-header")) return "header";
+    if (a.closest(".site-footer")) return "footer";
+    if (a.closest(".contact-strip")) return "contact_strip";
+    return "page";
+  }
   doc.addEventListener("click", function (e) {
-    if (e.target.closest && e.target.closest('a[href*="wa.me/"], a[href*="whatsapp.com/"]')) statHit("whatsapp");
+    var wa = e.target.closest && e.target.closest('a[href*="wa.me/"], a[href*="whatsapp.com/"]');
+    if (!wa) return;
+    statHit("whatsapp");
+    if (waContact(wa)) metaTrack("Contact", { content_name: waPlace(wa) });
   }, true);
 
   /* ----- header: fondo al scrollear ----- */
@@ -94,15 +125,23 @@
     burger.focus();
   }
 
-  /* ----- cookies / consentimiento (carga GA solo con permiso) ----- */
+  /* ----- cookies / consentimiento (carga GA y el píxel de Meta solo con permiso) ----- */
   var banner = $("#cookieBanner");
   var ckSettings = $("#cookieSettings");
   var CK_KEY = "zeekr-consent";
+  var consentNow = null;   // lo elegido en esta visita (vale aunque el navegador no deje guardarlo)
   function readConsent() { try { return JSON.parse(localStorage.getItem(CK_KEY) || "null"); } catch (e) { return null; } }
+  function analyticsOk() {
+    if (consentNow !== null) return consentNow;
+    var c = readConsent();
+    return !!(c && c.analytics);
+  }
   function saveConsent(analytics) {
+    consentNow = !!analytics;
     try { localStorage.setItem(CK_KEY, JSON.stringify({ necessary: true, analytics: !!analytics, at: Date.now() })); } catch (e) { /* sin storage: no persiste */ }
     if (banner) banner.hidden = true;
     if (analytics && window.__zkGA) window.__zkGA();
+    if (analytics && window.__zkMeta) window.__zkMeta();
   }
   if (banner && !readConsent()) banner.hidden = false;
 
@@ -183,6 +222,25 @@
   } catch (e) { /* sin storage */ }
   function utms() { try { return JSON.parse(sessionStorage.getItem("zk-utm") || "{}"); } catch (e) { return {}; } }
 
+  /* ----- datos para la API de conversiones de Meta (functions/_lib/meta-capi.js) -----
+     Van siempre en el POST. Si el visitante no aceptó las cookies, el servidor no manda nada a Meta
+     ("rechazado" también si todavía no eligió: el sitio pide permiso antes de medir, igual que con GA). */
+  function cookie(name) {
+    try { var m = doc.cookie.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]*)")); return m ? m[1] : ""; } catch (e) { return ""; }   // nunca frena el formulario
+  }
+  function metaData(eventId) {
+    var ok = analyticsOk();
+    var m = { event_id: eventId, event_source_url: location.href, consentimiento: ok ? "aceptado" : "rechazado" };
+    if (!ok) return m;
+    var fbp = cookie("_fbp"), fbc = cookie("_fbc");
+    if (!fbc) {
+      try { var id = new URLSearchParams(location.search).get("fbclid"); if (id && /^[A-Za-z0-9_.\-]+$/.test(id)) fbc = "fb.1." + Date.now() + "." + id; } catch (e) { /* sin fbclid */ }
+    }
+    if (fbp) m.fbp = fbp;
+    if (fbc) m.fbc = fbc;
+    return m;
+  }
+
   /* ----- formulario → API (Bitrix) con respaldo a WhatsApp ----- */
   function setError(input, on) {
     var field = input.closest(".field");
@@ -242,6 +300,8 @@
       idioma: form.elements.idioma ? form.elements.idioma.value : doc.documentElement.lang
     };
     var u = utms(); UTM_KEYS.forEach(function (k) { if (u[k]) payload[k] = u[k]; });
+    var eventId = newEventId();   // el mismo en el píxel y en la API de conversiones: Meta cuenta un solo Lead
+    payload.meta = metaData(eventId);
     btn.disabled = true; btn.querySelector("span").textContent = tr("sending", "Enviando…");
     if (status) status.textContent = "";
     var ctrl = ("AbortController" in window) ? new AbortController() : null;
@@ -252,12 +312,14 @@
         clearTimeout(t);
         if (!res.ok) throw new Error(res.data && res.data.detail ? String(res.data.detail) : "error");
         if (window.gtag) window.gtag("event", "generate_lead", { method: "web_form", model: payload.modelo });
+        if (!payload.website) metaTrack("Lead", { content_name: payload.tipo }, eventId);
         showSuccess(form, res.data, wa);
       })
       .catch(function () {
         clearTimeout(t);
         /* respaldo: el lead no se pierde, va directo por WhatsApp */
         if (window.gtag) window.gtag("event", "generate_lead", { method: "whatsapp_fallback", model: payload.modelo });
+        metaTrack("Contact", { content_name: "whatsapp_fallback" });   // no hay lead en Bitrix: es un contacto
         window.open(wa, "_blank", "noopener");
         if (status) status.textContent = tr("fallback", "No pudimos registrar la consulta en el sistema; te llevamos a WhatsApp para que un asesor te atienda igual.");
         btn.disabled = false; btn.querySelector("span").textContent = btn.getAttribute("data-label");
