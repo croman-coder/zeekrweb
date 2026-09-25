@@ -138,13 +138,18 @@ DIRECTUS_TOKEN="$DIRECTUS_BUILDER_TOKEN" SITES_ROOT=/tmp/zk-parity bash scripts/
   ser esa ruta: `current`/`preview` son symlinks absolutos). nginx sigue el symlink en cada pedido: publicar o
   volver atrás se ve enseguida, sin reiniciar ni redesplegar.
 - `zeekrlife.com.py` (y www → 301, y el alias `zeekr.santarosa.lat`, noindex) → `root /srv/sites/zeekr/current`.
-- **Red de seguridad:** la imagen sigue trayendo la copia del repo en `/usr/share/nginx/html`. Si un archivo no
-  está en la release, nginx lo sirve de ahí con las mismas cabeceras (`@baked_*` en `nginx.conf`); si el volumen no
-  está montado o no hay ninguna publicación, sale todo de la copia. Por eso siguen andando las URLs viejas de
-  imágenes (`images/_opt/{hero,menu,zeekr7x,…}`, que las releases reemplazan por `images/_opt/cms/…`) y las
-  fotos sueltas `*.jpg.jpeg` de la raíz. **Efecto a tener en cuenta:** una página que se saque del panel (noticia
-  o modelo) sigue respondiendo 200 con la versión del repo mientras esté en `main`; para darla de baja del todo
-  hay que borrarla también del repo.
+- **Las páginas salen solo de la release** (HTML, directorios, sitemap, robots, llms.txt): lo que se despublica
+  en el panel da 404 al publicar, con el 404 de su idioma (probado el 25/09 con una noticia en los 4 idiomas).
+- **Red de seguridad, solo para estáticos:** la imagen sigue trayendo la copia del repo en `/usr/share/nginx/html`.
+  Una imagen, css, js, fuente, pdf, video o ícono que no esté en la release sale de ahí con las mismas cabeceras
+  (`@baked_static`). Por eso siguen andando las URLs viejas de imágenes (`images/_opt/{hero,menu,zeekr7x,…}`, que
+  las releases reemplazan por `images/_opt/cms/…`) y las fotos sueltas `*.jpg.jpeg` de la raíz.
+- **Si no hay release publicada** (volumen sin montar, `current` inexistente o roto, o sin `index.html`) el sitio
+  entero sale de la copia de la imagen (`$site_root` en `nginx.conf`), para que el dominio nunca quede vacío.
+- **Archivos internos → 404** en producción, alias y vista previa: dotfiles/dirs (`.git`, `.wrangler`, `.gitignore`,
+  `.env`…), `__pycache__/`, `docker-compose*`, `Dockerfile*`, `*.py/.pyc/.sh/.md/.mjs/.yml/.yaml/.toml/.env/.conf/…`,
+  `_headers`, `_redirects`, `/functions/`. `/cms/` y `/admin/` (`^~`) y `/api/` (app 17 en Traefik) no pasan por
+  esas reglas.
 - `https://preview-zeekr.santarosa.lat` → `root /srv/sites/zeekr/preview`, **sin** red de seguridad (lo que no
   está da 404), `X-Robots-Tag: noindex, nofollow`, `Cache-Control: no-store`, misma CSP que producción y un
   `robots.txt` propio con `Disallow: /`. Está en el fqdn de la app 16 (router Traefik `http-4`); el túnel y el
@@ -192,6 +197,7 @@ Objetivo del spec: completo ≤ 90 s, incremental ≤ 30 s.
 - 14 fotos sueltas `*.jpg.jpeg` en la raíz de `main` y las `images/_opt/{hero,menu,zeekr7x,…}` viejas no están
   en las releases del builder: hoy salen de la copia de la imagen (red de seguridad). Decidir si se mantienen o
   se pasan a 301/404 a propósito.
-- `/docker-compose.yaml` (lo escribe Coolify en el directorio de build y el `COPY .` lo mete en la imagen) se
-  sirve con 200 desde antes de este cambio: no tiene secretos (las variables van por `.env`), pero muestra
-  etiquetas y rutas internas. Conviene borrarlo en el `Dockerfile` junto con el resto.
+- Purgar de la caché de Cloudflare (zona zeekrlife.com.py, que el token del túnel no alcanza)
+  `https://zeekrlife.com.py/images/_opt/og/zeekr-7x.jpg`: la edge todavía da la imagen de Open Graph vieja del 7X.
+- El sitemap pone `lastmod` = día del build en todas las páginas que no son noticias: cada "Publicar" de un día
+  nuevo cambia esas fechas aunque el contenido no cambie.
