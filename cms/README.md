@@ -67,21 +67,21 @@ DIRECTUS_TOKEN="$DIRECTUS_BUILDER_TOKEN" SITES_ROOT=/tmp/zk-parity bash scripts/
 
 ## Builder (botones Vista previa / Publicar / Volver)
 
-> **Hoy el sitio público todavía NO sale de acá.** zeekrlife.com.py lo sigue sirviendo la app 16 con el HTML
-> del repo (`main`). El builder ya publica en el volumen `zeekr_sites`, pero el cambio del sitio a ese volumen
-> es la Task 12. Hasta entonces, "Publicar" en el panel no cambia lo que ve el público.
+> **Desde el 25/09/2026 el sitio público sale de acá:** "Publicar" cambia lo que ve zeekrlife.com.py al
+> instante (sin redesplegar nada) y "Vista previa" se ve en https://preview-zeekr.santarosa.lat. Detalle en
+> [Cómo se sirve](#cómo-se-sirve-app-16-zeekr-web).
 
 ### App en Coolify
 
 - App 20 `zeekr-builder` (uuid `pymlwpcftohfpayqbwhobu9b`): `build_pack=dockerfile`, `/builder/Dockerfile`
-  (contexto: raíz del repo), repo `croman-coder/zeekrweb` rama **`worktree-admin-cms`** (el código del builder
-  todavía no está en `main`; al mergear, cambiar `git_branch` a `main`). Fuente "Public GitHub": no necesita
-  credenciales porque el repo es público.
+  (contexto: raíz del repo), repo `croman-coder/zeekrweb` rama **`main`** (hasta el 25/09/2026 fue
+  `worktree-admin-cms`; se cambió al mergearla en `main`). Fuente "Public GitHub": no necesita credenciales
+  porque el repo es público.
 - **Sin dominio** (fqdn vacío, cero etiquetas de Traefik, sin puertos publicados): solo se llega desde la red
   `coolify` por el alias **`http://zeekr-builder:8000`** (`custom_network_aliases`). Corre como uid 10001.
 - Volumen docker **`zeekr_sites`** → `/srv/sites`. Sobrevive a los redespliegues (el workspace, las releases y
   los symlinks quedan).
-- Auto-deploy **apagado**: un push a la rama no redespliega. Para desplegar:
+- Auto-deploy **apagado**: un push a `main` no redespliega el builder. Para desplegar:
   ```bash
   ssh srpy-servidor "docker exec coolify php artisan tinker --execute='
   \$app=\App\Models\Application::where(\"name\",\"zeekr-builder\")->firstOrFail();
@@ -132,6 +132,29 @@ DIRECTUS_TOKEN="$DIRECTUS_BUILDER_TOKEN" SITES_ROOT=/tmp/zk-parity bash scripts/
 - Los archivos iguales a `current` se hardlinkean. Después de redesplegar el builder, los assets del repo
   cambian de mtime y la primera release nueva ocupa ~65 MB más (el volumen ronda 0,6–1,5 GB).
 
+### Cómo se sirve (app 16 `zeekr-web`)
+
+- La app 16 (nginx, `nginx.conf` de `main`) monta el **mismo volumen `zeekr_sites` en `/srv/sites`** (tiene que
+  ser esa ruta: `current`/`preview` son symlinks absolutos). nginx sigue el symlink en cada pedido: publicar o
+  volver atrás se ve enseguida, sin reiniciar ni redesplegar.
+- `zeekrlife.com.py` (y www → 301, y el alias `zeekr.santarosa.lat`, noindex) → `root /srv/sites/zeekr/current`.
+- **Red de seguridad:** la imagen sigue trayendo la copia del repo en `/usr/share/nginx/html`. Si un archivo no
+  está en la release, nginx lo sirve de ahí con las mismas cabeceras (`@baked_*` en `nginx.conf`); si el volumen no
+  está montado o no hay ninguna publicación, sale todo de la copia. Por eso siguen andando las URLs viejas de
+  imágenes (`images/_opt/{hero,menu,zeekr7x,…}`, que las releases reemplazan por `images/_opt/cms/…`) y las
+  fotos sueltas `*.jpg.jpeg` de la raíz. **Efecto a tener en cuenta:** una página que se saque del panel (noticia
+  o modelo) sigue respondiendo 200 con la versión del repo mientras esté en `main`; para darla de baja del todo
+  hay que borrarla también del repo.
+- `https://preview-zeekr.santarosa.lat` → `root /srv/sites/zeekr/preview`, **sin** red de seguridad (lo que no
+  está da 404), `X-Robots-Tag: noindex, nofollow`, `Cache-Control: no-store`, misma CSP que producción y un
+  `robots.txt` propio con `Disallow: /`. Está en el fqdn de la app 16 (router Traefik `http-4`); el túnel y el
+  CNAME ya existían.
+- Etiquetas de la app 16: si se regeneran con `generateLabelsApplication()`, volver a poner
+  `…-to-non-www.redirectregex.permanent=true` (Coolify lo genera en `false` y el 301 de www es a mano).
+- **Volver al sitio de antes** (si algo sale mal con el volumen): redesplegar la app 16 en el commit
+  `1cfad53` (imagen `qqq99jyv4ubrstlfwjmaibv3:1cfad53…`, sirve solo la copia del repo), o sacar el volumen de la
+  app 16: sin `/srv/sites` el nginx nuevo sirve todo de la copia de la imagen.
+
 ### Tiempos medidos (24 sep 2026, servidor SRPY186)
 
 | Build | Duración |
@@ -166,6 +189,9 @@ Objetivo del spec: completo ≤ 90 s, incremental ≤ 30 s.
 - SMTP (Google Workspace) para recuperar contraseña e invitaciones.
 - Primer ingreso de Croman: Directus pide completar el "project owner" y aceptar su licencia (BSL 1.1).
 - `ANTHROPIC_API_KEY` en la app 20 para que el builder traduzca lo nuevo (hoy lo que falte sale en español).
-- Task 12: servir zeekrlife.com.py desde `zeekr_sites/zeekr/current` y el host de vista previa desde `preview`.
-- 14 fotos sueltas `*.jpg.jpeg` en la raíz de `main` se sirven hoy pero no están en las releases del builder
-  (nada del sitio las usa); tampoco las `images/_opt/{hero,menu,zeekr7x,…}` viejas, que pasan a `images/_opt/cms/`.
+- 14 fotos sueltas `*.jpg.jpeg` en la raíz de `main` y las `images/_opt/{hero,menu,zeekr7x,…}` viejas no están
+  en las releases del builder: hoy salen de la copia de la imagen (red de seguridad). Decidir si se mantienen o
+  se pasan a 301/404 a propósito.
+- `/docker-compose.yaml` (lo escribe Coolify en el directorio de build y el `COPY .` lo mete en la imagen) se
+  sirve con 200 desde antes de este cambio: no tiene secretos (las variables van por `.env`), pero muestra
+  etiquetas y rutas internas. Conviene borrarlo en el `Dockerfile` junto con el resto.
