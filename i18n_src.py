@@ -113,7 +113,7 @@ T = [
 ("Rechazar todo", "Reject all", "Rejeitar tudo", "全部拒绝"),
 ("Aceptar todo", "Accept all", "Aceitar tudo", "全部接受"),
 ("Necesarias (siempre activas)", "Necessary (always on)", "Necessários (sempre ativos)", "必要 Cookie（始终启用）"),
-("Analíticas y rendimiento (Google Analytics)", "Analytics and performance (Google Analytics)", "Análise e desempenho (Google Analytics)", "分析与性能（Google Analytics）"),
+("Analíticas y publicidad (Google Analytics, Meta)", "Analytics and advertising (Google Analytics, Meta)", "Análise e publicidade (Google Analytics, Meta)", "分析与广告（Google Analytics、Meta）"),
 ("Guardar preferencias", "Save preferences", "Salvar preferências", "保存偏好"),
 # --- modal / formulario
 ("Prueba de manejo", "Test drive", "Test drive", "预约试驾"),

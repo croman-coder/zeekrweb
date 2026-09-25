@@ -756,7 +756,7 @@ def header(active="", alts=None):
     </div>
     <div class="cookie-settings" id="cookieSettings" hidden>
       <label class="check"><input type="checkbox" checked disabled><span>{_("Necesarias (siempre activas)")}</span></label>
-      <label class="check"><input type="checkbox" id="ckAnalytics" checked><span>{_("Analíticas y rendimiento (Google Analytics)")}</span></label>
+      <label class="check"><input type="checkbox" id="ckAnalytics" checked><span>{_("Analíticas y publicidad (Google Analytics, Meta)")}</span></label>
       <button class="btn btn-dark" type="button" data-cookie-save>{_("Guardar preferencias")}</button>
     </div>
   </div>

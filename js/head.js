@@ -17,7 +17,7 @@ window.__zkGA = function () {
 };
 /* Píxel de Meta (ZEEKR Paraguay, 1384147742910671): el código base de Meta sin script inline (la CSP no lo
    permite). Va con la misma aceptación que GA: el aviso de cookies tiene una sola categoría opcional
-   ("Analíticas y rendimiento"). Solo en zeekrlife.com.py: el alias y la vista previa no ensucian las
+   ("Analíticas y publicidad"). Solo en zeekrlife.com.py: el alias y la vista previa no ensucian las
    audiencias. Devuelve true la vez que lo enciende (main.js suma ahí el ViewContent de la página de modelo). */
 window.__zkFB = function () {
   if (window.__zkFBOn || window.fbq || location.hostname !== "zeekrlife.com.py") return false;
