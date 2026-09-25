@@ -11,7 +11,14 @@
  *
  * Estadísticas: handle() recibe opcionalmente { stats } (functions/_lib/stats.js, solo en el servidor Node)
  * y cuenta un "lead" por cada lead creado en Bitrix. Sin stats (Cloudflare Pages) todo sigue igual.
+ *
+ * Meta: cuando Bitrix crea el lead, manda el mismo Lead a la API de conversiones (functions/_lib/meta-capi.js).
+ * env: META_CAPI_TOKEN (sin ella no se manda nada) · META_PIXEL_ID (opcional) · META_TEST_EVENT_CODE (opcional).
+ * En Node ({ metaEnSegundoPlano: true }) corre sin demorar la respuesta; en Cloudflare se espera (tope 3 s)
+ * porque lo que sigue después de responder puede quedar cortado. Nunca cambia la respuesta.
  */
+import { enviarLeadMeta } from "./meta-capi.js";
+
 const SITE = "zeekrlife.com.py";
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
 
@@ -143,8 +150,9 @@ export async function createLead(body, env) {
   return { ok: true, leadId, asesor: advisor.name ? advisor.name.split(" ")[0].replace(/^(.)(.*)$/, (m, a, b) => a + b.toLowerCase()) : null };
 }
 
-/** Manejador HTTP común (Request → Response, estándar Fetch). ctx.stats: contador opcional (stats.js). */
-export async function handle(request, env, { stats } = {}) {
+/** Manejador HTTP común (Request → Response, estándar Fetch). ctx.stats: contador opcional (stats.js);
+ *  ctx.metaEnSegundoPlano: no esperar a la API de conversiones de Meta (servidor Node). */
+export async function handle(request, env, { stats, metaEnSegundoPlano = false } = {}) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "");
   const json = (status, obj) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
@@ -159,6 +167,10 @@ export async function handle(request, env, { stats } = {}) {
     if (result.leadId) {
       console.log(`lead ${result.leadId} → ${result.asesor} ip=${ip}`);
       try { if (stats) stats.lead(body); } catch (e) { console.error("estadísticas (lead):", e.message); }
+      try {
+        const capi = enviarLeadMeta({ lead: validate(body), meta: body.meta, headers: request.headers, env, ref: result.leadId }).catch(() => {});
+        if (!metaEnSegundoPlano) await capi;
+      } catch { /* la API de conversiones nunca cambia la respuesta */ }
     }
     return json(200, result);
   } catch (e) {
