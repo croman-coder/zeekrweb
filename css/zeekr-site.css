@@ -132,7 +132,7 @@ html[lang="zh-Hans"] h1,html[lang="zh-Hans"] h2,html[lang="zh-Hans"] h3{letter-s
 .mm-actions{display:grid;gap:12px;margin-top:40px}
 
 /* ---------- cookies ---------- */
-.cookie-banner{position:fixed;left:0;right:0;bottom:0;z-index:140;background:var(--paper);color:var(--rock);padding:20px clamp(20px,4vw,40px) calc(22px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.3)}
+.cookie-banner{position:fixed;left:0;right:0;bottom:0;z-index:140;background:var(--paper);color:var(--rock);padding:20px clamp(20px,4vw,40px) calc(22px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.3);max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain}
 .cookie-banner[hidden]{display:none}
 .cookie-inner{max-width:1600px;margin:0 auto}
 .cookie-text{font-size:12.5px;line-height:1.55;color:#444;max-width:1500px}
@@ -142,6 +142,8 @@ html[lang="zh-Hans"] h1,html[lang="zh-Hans"] h2,html[lang="zh-Hans"] h3{letter-s
 .cookie-settings[hidden]{display:none}
 .check{display:inline-flex;gap:10px;align-items:center;font-size:14px;cursor:pointer}
 .check input{width:18px;height:18px;accent-color:#0A0A0A;margin:0}
+.cookie-detail{flex-basis:100%;margin:0;font-size:12.5px;line-height:1.55;color:#444;max-width:1500px}
+.cookie-detail a{text-decoration:underline;text-underline-offset:2px}
 
 /* ---------- hero (carrusel) ---------- */
 .hero{position:relative;height:100svh;min-height:640px;max-height:1100px;background:var(--black);overflow:hidden;color:var(--ink)}

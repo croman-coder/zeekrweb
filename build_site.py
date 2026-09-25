@@ -673,6 +673,15 @@ def mobile_langs(alts):
         f'<a href="{alts[k]}" lang="{LANGS[k]["html"]}" hreflang="{LANGS[k]["hreflang"]}"{" aria-current=\"true\"" if k == L else ""}>{LANGS[k]["short"]}</a>' for k in LANGS) + "</div>"
 
 
+# Qué incluye la categoría opcional del banner de cookies (js/head.js carga GA y el píxel de Meta con ese permiso y
+# functions/_lib/meta-capi.js manda los formularios a Meta). Texto fijo, no editable en el panel: describe el código.
+COOKIE_DETAIL = ("Google Analytics 4 (Google): cookies como _ga y _ga_*, para contar las visitas, saber qué páginas se ven, desde qué tipo de "
+                 "dispositivo y de dónde llegan. Nos sirve para mejorar el sitio. Píxel de Meta (Facebook e Instagram): cookies como _fbp y _fbc, "
+                 "para medir los resultados de nuestros anuncios y poder mostrar anuncios a personas que visitaron el sitio. Cuando completás un "
+                 "formulario, tus datos de contacto se envían a Meta cifrados (con un código irreversible, no en texto legible) para medir los "
+                 "resultados de los anuncios. No vendemos tus datos.")
+
+
 def header(active="", alts=None):
     alts = alts or alternates(url_home)
 
@@ -756,7 +765,8 @@ def header(active="", alts=None):
     </div>
     <div class="cookie-settings" id="cookieSettings" hidden>
       <label class="check"><input type="checkbox" checked disabled><span>{_("Necesarias (siempre activas)")}</span></label>
-      <label class="check"><input type="checkbox" id="ckAnalytics" checked><span>{_("Analíticas y rendimiento (Google Analytics)")}</span></label>
+      <label class="check"><input type="checkbox" id="ckAnalytics" checked aria-describedby="ckAnalyticsInfo"><span>{_("Analíticas y publicidad (Google Analytics y píxel de Meta)")}</span></label>
+      <p class="cookie-detail" id="ckAnalyticsInfo">{_(COOKIE_DETAIL)} {_("Más información:")} <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">{_("política de privacidad de Google")}</a> · <a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener">{_("política de privacidad de Meta")}</a></p>
       <button class="btn btn-dark" type="button" data-cookie-save>{_("Guardar preferencias")}</button>
     </div>
   </div>
