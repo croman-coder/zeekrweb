@@ -212,6 +212,25 @@ consentimiento de cookies; Google Analytics sigue aparte y solo con permiso).
   "estadísticas: activadas…"; si Directus falla: "estadísticas: no se pudo guardar…").
 - Para empezar de cero: borrar las filas de `site_stats` (Contenido → Site Stats, o `DELETE /items/site_stats`).
 
+## Píxel de Meta y API de conversiones
+
+Dataset "Zeekr Paraguay" (`1384147742910671`). Qué hace y variables: `api/README.md`. Para operar:
+
+- **Llega al sitio con el builder, no con el push:** `js/head.js`, `js/main.js`, el CSS y los textos del banner viajan
+  en la imagen de la app 20. Después de mergear en `main`: redesplegar la app 20 (comando de arriba) y tocar
+  **Publicar**; la release nueva trae los `?v=` nuevos. Hasta entonces se sigue sirviendo lo publicado antes.
+- **CSP (app 16):** `nginx.conf` permite `https://connect.facebook.net` (script y connect) y `https://www.facebook.com`
+  (img y connect). Redesplegar la app 16 (mismo comando, `name` = `zeekr-web`) antes de publicar: con la CSP vieja el
+  navegador bloquea el píxel (el resto del sitio anda igual).
+- **API de conversiones (app 17):** cargar `META_CAPI_TOKEN` (valor solo en Coolify, por archivo temporal + tinker como
+  las demás) y redesplegar la app 17 (`name` = `zeekr-leads-api`). Arranque: `meta capi: activada (píxel …)`.
+- **Probar:** Administrador de eventos → "Zeekr Paraguay" → Probar eventos. El píxel manda `PageView`, `Contact` y `Lead`
+  solo desde zeekrlife.com.py con las cookies aceptadas (la vista previa y el alias no mandan nada). Para ver el `Lead`
+  del servidor ahí, cargar también `META_TEST_EVENT_CODE` en la app 17 y sacarlo después; cada prueba crea un lead
+  real en Bitrix.
+- El banner de cookies tiene una sola categoría opcional, "Analíticas y publicidad (Google Analytics y píxel de Meta)",
+  con el detalle de qué hace cada uno. El párrafo principal del banner (`cookie_text`) se edita en el panel.
+
 ## Backup
 
 - Cron del servidor (usuario `santarosa`), 03:30: `~/.local/bin/backup-directus.sh` (fuente versionada:
@@ -227,6 +246,7 @@ consentimiento de cookies; Google Analytics sigue aparte y solo con permiso).
 - SMTP (Google Workspace) para recuperar contraseña e invitaciones.
 - Primer ingreso de Croman: Directus pide completar el "project owner" y aceptar su licencia (BSL 1.1).
 - `ANTHROPIC_API_KEY` en la app 20 para que el builder traduzca lo nuevo (hoy lo que falte sale en español).
+- `META_CAPI_TOKEN` en la app 17 para la API de conversiones de Meta (sin ella solo mide el píxel del navegador).
 - 14 fotos sueltas `*.jpg.jpeg` en la raíz de `main` y las `images/_opt/{hero,menu,zeekr7x,…}` viejas no están
   en las releases del builder: hoy salen de la copia de la imagen (red de seguridad). Decidir si se mantienen o
   se pasan a 301/404 a propósito.
