@@ -59,8 +59,18 @@
   });
   function fbViewContent() { if (pageModel) fbTrack("ViewContent", { content_name: pageModel, content_category: "ZEEKR" }); }
   fbViewContent();
+  /* Dónde estaba el enlace: el mismo parámetro "location" que mandan las otras webs de marca. */
+  function waLocation(a) {
+    if (a.closest("header")) return "header";
+    if (a.closest("footer")) return "footer";
+    if (a.closest("form, #contactModal, .contact-strip")) return "formulario";
+    return "contenido";
+  }
   doc.addEventListener("click", function (e) {
-    if (e.target.closest && e.target.closest('a[href*="wa.me/"], a[href*="whatsapp.com/"]')) { statHit("whatsapp"); fbTrack("Contact"); }
+    var a = e.target.closest && e.target.closest('a[href*="wa.me/"], a[href*="whatsapp.com/"]');
+    if (!a) return;
+    statHit("whatsapp"); fbTrack("Contact");
+    if (window.gtag) window.gtag("event", "click_whatsapp", { location: waLocation(a) });
   }, true);
 
   /* ----- header: fondo al scrollear ----- */
@@ -271,14 +281,14 @@
       .then(function (res) {
         clearTimeout(t);
         if (!res.ok) throw new Error(res.data && res.data.detail ? String(res.data.detail) : "error");
-        if (window.gtag) window.gtag("event", "generate_lead", { method: "web_form", model: payload.modelo });
+        if (window.gtag) window.gtag("event", "generate_lead", { form: payload.tipo, method: "web_form", model: payload.modelo });
         fbTrack("Lead", { content_name: payload.tipo });  // solo con el lead registrado (no en el respaldo a WhatsApp)
         showSuccess(form, res.data, wa);
       })
       .catch(function () {
         clearTimeout(t);
         /* respaldo: el lead no se pierde, va directo por WhatsApp */
-        if (window.gtag) window.gtag("event", "generate_lead", { method: "whatsapp_fallback", model: payload.modelo });
+        if (window.gtag) window.gtag("event", "generate_lead", { form: payload.tipo, method: "whatsapp_fallback", model: payload.modelo });
         window.open(wa, "_blank", "noopener");
         if (status) status.textContent = tr("fallback", "No pudimos registrar la consulta en el sistema; te llevamos a WhatsApp para que un asesor te atienda igual.");
         btn.disabled = false; btn.querySelector("span").textContent = btn.getAttribute("data-label");
