@@ -5,7 +5,11 @@
 #   DIRECTUS_ADMIN_TOKEN=... python3 cms/setup_roles.py
 # Uso (rotar el token del builder a propósito):
 #   DIRECTUS_ADMIN_TOKEN=... ROTATE_BUILDER_TOKEN=1 BUILDER_STATIC_TOKEN=<nuevo> python3 cms/setup_roles.py
+# Usuario de estadísticas (stats@santarosa.com.py, lo usa la API de leads para escribir site_stats): igual que el
+# builder, con STATS_STATIC_TOKEN la primera vez y ROTATE_STATS_TOKEN=1 para rotarlo. Sin STATS_STATIC_TOKEN y sin
+# usuario creado, se saltea (el resto se aplica igual).
 import os
+from urllib.parse import quote
 from common import api
 
 SITE = {"site": {"_eq": "$CURRENT_USER.site"}}
@@ -23,12 +27,12 @@ ACTIONS = ["create", "read", "update", "delete"]
 
 
 def ensure_policy(name, **kw):
-    found = api("GET", f"/policies?filter[name][_eq]={name}&limit=1")
+    found = api("GET", f"/policies?filter[name][_eq]={quote(name)}&limit=1")
     return found[0] if found else api("POST", "/policies", {"name": name, "icon": "badge", "app_access": True, "admin_access": False, "enforce_tfa": False, **kw})
 
 
 def ensure_role(name, policy_id, icon):
-    found = api("GET", f"/roles?filter[name][_eq]={name}&limit=1")
+    found = api("GET", f"/roles?filter[name][_eq]={quote(name)}&limit=1")
     role = found[0] if found else api("POST", "/roles", {"name": name, "icon": icon})
     if not api("GET", f"/access?filter[role][_eq]={role['id']}&filter[policy][_eq]={policy_id}&limit=1"):
         api("POST", "/access", {"role": role["id"], "policy": policy_id})
@@ -74,6 +78,9 @@ perm(ed["id"], "directus_users", "update", {"id": {"_eq": "$CURRENT_USER"}},
 perm(ed["id"], "directus_flows", "read")          # ver los botones
 perm(ed["id"], "directus_revisions", "read")      # historial de cambios
 perm(ed["id"], "directus_activity", "read")
+perm(ed["id"], "site_stats", "read", SITE)        # estadísticas de su sitio (solo lectura)
+perm(ed["id"], "directus_dashboards", "read")     # módulo Insights: ver los tableros…
+perm(ed["id"], "directus_panels", "read")         # …y sus paneles (los datos igual se filtran por su sitio)
 
 # ---- Builder (servicio): lee todo el contenido, escribe builds, traducciones y translation_meta
 bp = ensure_policy("Builder", app_access=False)
@@ -85,18 +92,36 @@ for c in ["builds", "translation_meta"] + list(TR_FILTER):
         perm(bp["id"], c, a)
 for c in ["section_gallery", "news_gallery"]:
     perm(bp["id"], c, "update", fields=["alt_en", "alt_pt", "alt_zh"])
-u = api("GET", "/users?filter[email][_eq]=builder@santarosa.com.py&limit=1")
-rotate = os.environ.get("ROTATE_BUILDER_TOKEN") == "1"
-if u:
-    if rotate:
-        tok = os.environ.get("BUILDER_STATIC_TOKEN") or exit("falta BUILDER_STATIC_TOKEN (ROTATE_BUILDER_TOKEN=1)")
-        api("PATCH", f"/users/{u[0]['id']}", {"token": tok, "role": brole["id"], "status": "active"})
-        print("OK roles: Editor, Builder; token del builder rotado")
-    else:
-        # nunca reescribir el token en un rerun normal: romperia al builder ya desplegado con el token viejo
-        api("PATCH", f"/users/{u[0]['id']}", {"role": brole["id"], "status": "active"})
-        print("OK roles: Editor, Builder; token del builder sin cambios (ROTATE_BUILDER_TOKEN=1 para rotar)")
-else:
-    tok = os.environ.get("BUILDER_STATIC_TOKEN") or exit("falta BUILDER_STATIC_TOKEN")
-    api("POST", "/users", {"email": "builder@santarosa.com.py", "first_name": "Builder", "role": brole["id"], "token": tok, "status": "active"})
-    print("OK roles: Editor, Builder; usuario builder@santarosa.com.py con token")
+
+
+def ensure_service_user(email, first_name, role_id, token_env, rotate_env, required=True):
+    """Usuario técnico con token estático. Nunca reescribe el token en un rerun normal (rompería al servicio ya
+    desplegado con el token viejo); con <rotate_env>=1 lo cambia por <token_env>."""
+    u = api("GET", f"/users?filter[email][_eq]={email}&limit=1")
+    if u:
+        if os.environ.get(rotate_env) == "1":
+            tok = os.environ.get(token_env) or exit(f"falta {token_env} ({rotate_env}=1)")
+            api("PATCH", f"/users/{u[0]['id']}", {"token": tok, "role": role_id, "status": "active"})
+            return "token rotado"
+        api("PATCH", f"/users/{u[0]['id']}", {"role": role_id, "status": "active"})
+        return f"token sin cambios ({rotate_env}=1 para rotar)"
+    tok = os.environ.get(token_env)
+    if not tok:
+        if required:
+            exit(f"falta {token_env}")
+        return f"sin crear (falta {token_env})"
+    api("POST", "/users", {"email": email, "first_name": first_name, "role": role_id, "token": tok, "status": "active"})
+    return "creado con token"
+
+
+print("builder@santarosa.com.py:", ensure_service_user("builder@santarosa.com.py", "Builder", brole["id"], "BUILDER_STATIC_TOKEN", "ROTATE_BUILDER_TOKEN"))
+
+# ---- Estadísticas (servicio): la API de leads suma visitas, formularios y clics a WhatsApp en site_stats.
+# Sin acceso al panel; solo site_stats (crear/leer/actualizar) y el id del sitio por su slug.
+sp = ensure_policy("Estadísticas (escritura)", app_access=False, icon="insights")
+srole = ensure_role("Estadísticas", sp["id"], "insights")
+for a in ["create", "read", "update"]:
+    perm(sp["id"], "site_stats", a)
+perm(sp["id"], "sites", "read", fields=["id", "slug"])
+print("stats@santarosa.com.py:", ensure_service_user("stats@santarosa.com.py", "Estadísticas", srole["id"], "STATS_STATIC_TOKEN", "ROTATE_STATS_TOKEN", required=False))
+print("OK roles: Editor, Builder, Estadísticas")

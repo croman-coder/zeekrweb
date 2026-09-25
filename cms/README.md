@@ -37,7 +37,7 @@
 | Archivo (notebook, modo 600) | Qué tiene |
 |---|---|
 | `~/.zeekr-cms-secrets.env` | `KEY`, `SECRET`, `ADMIN_PASSWORD` (inicial de croman@santarosa.com.py), `BUILDER_TOKEN` (el `X-Builder-Token` que mandan los Flows al builder; también cargado en Coolify) |
-| `~/.zeekr-cms-prod.env` | `DIRECTUS_URL=https://zeekrlife.com.py/cms`, `DIRECTUS_ADMIN_TOKEN` (token estático de croman@), `DIRECTUS_BUILDER_TOKEN` (token estático de builder@santarosa.com.py = `DIRECTUS_TOKEN` del builder) |
+| `~/.zeekr-cms-prod.env` | `DIRECTUS_URL=https://zeekrlife.com.py/cms`, `DIRECTUS_ADMIN_TOKEN` (token estático de croman@), `DIRECTUS_BUILDER_TOKEN` (token estático de builder@santarosa.com.py = `DIRECTUS_TOKEN` del builder), `DIRECTUS_STATS_TOKEN` (token estático de stats@santarosa.com.py = `DIRECTUS_STATS_TOKEN` de la API de leads, app 17) |
 
 El token estático del admin se fijó directo en `directus_users.token` (Directus 11 lo compara en texto plano),
 pasando el valor por stdin a un script de Node dentro del contenedor, sin usar la contraseña. También se puede
@@ -51,13 +51,16 @@ cd cms
 python3 setup_schema.py                                   # colecciones, campos, carpetas, sitio zeekr
 python3 setup_roles.py                                    # 1ª vez: BUILDER_STATIC_TOKEN="$DIRECTUS_BUILDER_TOKEN" python3 setup_roles.py
 BUILDER_URL=http://zeekr-builder:8000 python3 setup_flows.py   # flow de dominio + botones Vista previa/Publicar/Volver
+python3 setup_insights.py                                 # tablero "Estadísticas — Zeekr" (Insights)
 cd ..
 builder/.venv/bin/python -m builder.seed_from_code        # contenido actual → Directus (2ª corrida: 0 subidas)
 DIRECTUS_TOKEN="$DIRECTUS_BUILDER_TOKEN" SITES_ROOT=/tmp/zk-parity bash scripts/check_parity_cms.sh   # → PARIDAD CMS OK
 ```
 
 - `setup_roles.py` no toca el token del builder en las corridas siguientes; para rotarlo:
-  `ROTATE_BUILDER_TOKEN=1 BUILDER_STATIC_TOKEN=<nuevo>` (y actualizar el builder).
+  `ROTATE_BUILDER_TOKEN=1 BUILDER_STATIC_TOKEN=<nuevo>` (y actualizar el builder). Igual con el usuario de
+  estadísticas: la primera vez `STATS_STATIC_TOKEN="$DIRECTUS_STATS_TOKEN"`, para rotar `ROTATE_STATS_TOKEN=1`
+  (y actualizar `DIRECTUS_STATS_TOKEN` en la app 17).
 - Cloudflare bloquea el User-Agent `Python-urllib` (403, error 1010): `common.py` manda uno propio.
 - `seed_map.json` guarda ruta del repo → id de archivo **de producción**. Si se corre el seed contra otra
   instancia, detecta que los ids no existen allí, resube y reescribe el mapa (no commitear ese mapa).
@@ -178,6 +181,36 @@ Objetivo del spec: completo ≤ 90 s, incremental ≤ 30 s.
   intentos). Sin eso el primer build falló con 429.
 - Logs: `ssh srpy-servidor 'docker logs --tail 100 $(docker ps -q -f label=coolify.resourceName=zeekr-builder)'`.
 - Salud desde la red interna: `docker exec $(docker ps -q -f label=coolify.resourceName=directus) wget -qO- http://zeekr-builder:8000/health`.
+
+## Estadísticas (Insights → "Estadísticas — Zeekr")
+
+Contador propio de visitas, como el de Renew: **sin cookies, sin IDs y sin datos personales** (no necesita el
+consentimiento de cookies; Google Analytics sigue aparte y solo con permiso).
+
+- **Qué se cuenta:** cada página vista (`view`), cada clic a un enlace de WhatsApp (`whatsapp`) y cada formulario que
+  termina en un lead de Bitrix (`lead`). Solo en **zeekrlife.com.py**: el alias `zeekr.santarosa.lat` y la vista
+  previa no mandan nada, y las 404 no cuentan. Se descartan bots (`bot|crawl|spider|slurp|headless|lighthouse|preview`
+  en el User-Agent) y más de 300 hits por IP cada 10 minutos (la IP se usa en memoria y no se guarda).
+- **Camino:** `js/main.js` → `navigator.sendBeacon('/api/hit')` (mismo origen: la CSP no cambia) → Traefik → app 17
+  (`zeekr-leads-api`, recibe `/hit`) → `functions/_lib/stats.js` acumula en memoria y **cada 60 s** (y al apagarse)
+  hace upsert en `site_stats` por la red interna (`http://directus:8055`, usuario `stats@santarosa.com.py`). Un
+  reinicio pierde a lo sumo ese minuto. Si Directus no responde, conserva los contadores (tope 5.000 claves) y
+  reintenta en el próximo envío.
+- **Colección `site_stats`** (una fila por sitio / día / tipo / ruta / idioma, `count` acumulado): `day` es el día de
+  Asunción; `path` va sin query ni idioma y con la sección en español (`/en/models/zeekr-7x/` → `/modelos/zeekr-7x/`,
+  `lang=en`); `label` es el título de la página. Sin actividad ni revisiones (`accountability` nulo).
+- **Tablero** (`setup_insights.py`, idempotente por nombre): visitas 7 y 30 días, formularios y clics a WhatsApp 30
+  días, visitas por día (línea, 30 días), páginas y modelos más vistos (top 10, 30 días) y formularios por día
+  (barras). Los rangos cuentan días calendario con hoy; `$NOW` de Directus es UTC, así que de 21:00 a 24:00 de
+  Asunción la ventana corre un día. Con un solo día de datos la línea es apenas un punto.
+- **Permisos:** stats@ (rol y política "Estadísticas", sin acceso al panel): crear/leer/actualizar `site_stats` y
+  leer `id`/`slug` de `sites`. Editor: leer `site_stats` de **su** sitio y los tableros/paneles (solo lectura). Un
+  editor de otro sitio ve el tablero en cero.
+- **App 17:** variables `DIRECTUS_URL=http://directus:8055` y `DIRECTUS_STATS_TOKEN` (valor en
+  `~/.zeekr-cms-prod.env`), cargadas por archivo temporal + tinker como las demás. Sin ellas `/api/hit` responde 204
+  y no hace nada. Logs: `docker logs $(docker ps -q -f label=coolify.resourceName=zeekr-leads-api)` (arranque:
+  "estadísticas: activadas…"; si Directus falla: "estadísticas: no se pudo guardar…").
+- Para empezar de cero: borrar las filas de `site_stats` (Contenido → Site Stats, o `DELETE /items/site_stats`).
 
 ## Backup
 

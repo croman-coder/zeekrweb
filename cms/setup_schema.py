@@ -17,6 +17,13 @@ def F(field, type_, interface=None, options=None, special=None, required=False, 
     return {"field": field, "type": type_, "meta": meta, "schema": {"default_value": default} if default is not None else {}}
 
 
+def S(field, length, *a, **kw):
+    """F() de tipo string con largo máximo en la base."""
+    spec = F(field, "string", *a, **kw)
+    spec["schema"]["max_length"] = length
+    return spec
+
+
 def ensure_collection(name, fields, hidden=False, icon="box", note=None, singleton=False, sort_field=None, pk=PK):
     if exists(f"/collections/{name}"):
         print("  =", name)
@@ -189,6 +196,22 @@ ensure_collection("translation_meta", [F("collection", "string", "input", width=
                                        F("lang", "string", "input", width="half"), F("source_hash", "string", "input", width="half"),
                                        F("translated_by", "string", "select-dropdown", {"choices": [{"text": "IA", "value": "ai"}, {"text": "Humano", "value": "human"}]}, width="half"),
                                        F("translated_at", "timestamp", "datetime", width="half")], hidden=True, icon="translate")
+
+print("site_stats")
+# Contador propio de visitas (sin cookies ni datos personales): una fila por sitio/día/tipo/ruta/idioma. Lo escribe
+# la API de leads (usuario stats@, functions/_lib/stats.js) y se ve en Insights → "Estadísticas — Zeekr".
+# accountability null: sin actividad ni revisiones por cada suma (serían miles de filas al día en directus_activity).
+KINDS = [{"text": "Visita", "value": "view"}, {"text": "Formulario enviado", "value": "lead"}, {"text": "Clic a WhatsApp", "value": "whatsapp"}]
+day = F("day", "date", "datetime", required=True, width="half", note="Día de Asunción (America/Asuncion)")
+day["schema"]["is_indexed"] = True
+ensure_collection("site_stats", [day, S("kind", 16, "select-dropdown", {"choices": KINDS}, required=True, width="half"),
+                                 S("path", 255, "input", required=True, width="half", note="Ruta sin idioma ni query: /modelos/zeekr-7x/"),
+                                 S("lang", 8, "select-dropdown", {"choices": [{"text": t, "value": v} for v, t in [("es", "Español"), ("en", "English"), ("pt", "Português"), ("zh", "中文")]]}, width="half"),
+                                 S("label", 120, "input", width="half", note="Título de la página"),
+                                 F("count", "integer", "input", required=True, width="half", default=0)],
+                  icon="insights", note="Visitas, formularios y clics a WhatsApp por día (contador propio, sin cookies). Gráficos en Insights → Estadísticas — Zeekr")
+m2o("site_stats", "site", "sites", required=True)
+api("PATCH", "/collections/site_stats", {"meta": {"accountability": None, "display_template": "{{day}} · {{kind}} · {{path}} ({{lang}}): {{count}}"}})
 
 print("carpetas")
 root = api("GET", "/folders?filter[name][_eq]=zeekr&filter[parent][_null]=true&limit=1")

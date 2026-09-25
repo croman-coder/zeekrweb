@@ -391,6 +391,32 @@ collections:
       versioning: false
     schema:
       name: site_settings_translations
+  - collection: site_stats
+    meta:
+      accountability: null
+      archive_app_filter: true
+      archive_field: null
+      archive_value: null
+      collapse: open
+      collection: site_stats
+      color: null
+      display_template: '{{day}} · {{kind}} · {{path}} ({{lang}}): {{count}}'
+      group: null
+      hidden: false
+      icon: insights
+      item_duplication_fields: null
+      note: >-
+        Visitas, formularios y clics a WhatsApp por día (contador propio, sin
+        cookies). Gráficos en Insights → Estadísticas — Zeekr
+      preview_url: null
+      singleton: false
+      sort: null
+      sort_field: null
+      translations: null
+      unarchive_value: null
+      versioning: false
+    schema:
+      name: site_stats
   - collection: sites
     meta:
       accountability: all
@@ -6572,6 +6598,344 @@ fields:
       has_auto_increment: false
       foreign_key_table: null
       foreign_key_column: null
+  - collection: site_stats
+    field: id
+    type: integer
+    meta:
+      collection: site_stats
+      conditions: null
+      display: null
+      display_options: null
+      field: id
+      group: null
+      hidden: true
+      interface: input
+      note: null
+      options: null
+      readonly: true
+      required: false
+      searchable: true
+      sort: 1
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: id
+      table: site_stats
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: true
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: true
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: site_stats
+    field: day
+    type: date
+    meta:
+      collection: site_stats
+      conditions: null
+      display: null
+      display_options: null
+      field: day
+      group: null
+      hidden: false
+      interface: datetime
+      note: Día de Asunción (America/Asuncion)
+      options: null
+      readonly: false
+      required: true
+      searchable: true
+      sort: 2
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: half
+    schema:
+      name: day
+      table: site_stats
+      data_type: date
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: true
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: site_stats
+    field: kind
+    type: string
+    meta:
+      collection: site_stats
+      conditions: null
+      display: null
+      display_options: null
+      field: kind
+      group: null
+      hidden: false
+      interface: select-dropdown
+      note: null
+      options:
+        choices:
+          - text: Visita
+            value: view
+          - text: Formulario enviado
+            value: lead
+          - text: Clic a WhatsApp
+            value: whatsapp
+      readonly: false
+      required: true
+      searchable: true
+      sort: 3
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: half
+    schema:
+      name: kind
+      table: site_stats
+      data_type: varchar
+      default_value: null
+      max_length: 16
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: site_stats
+    field: path
+    type: string
+    meta:
+      collection: site_stats
+      conditions: null
+      display: null
+      display_options: null
+      field: path
+      group: null
+      hidden: false
+      interface: input
+      note: 'Ruta sin idioma ni query: /modelos/zeekr-7x/'
+      options: null
+      readonly: false
+      required: true
+      searchable: true
+      sort: 4
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: half
+    schema:
+      name: path
+      table: site_stats
+      data_type: varchar
+      default_value: null
+      max_length: 255
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: site_stats
+    field: lang
+    type: string
+    meta:
+      collection: site_stats
+      conditions: null
+      display: null
+      display_options: null
+      field: lang
+      group: null
+      hidden: false
+      interface: select-dropdown
+      note: null
+      options:
+        choices:
+          - text: Español
+            value: es
+          - text: English
+            value: en
+          - text: Português
+            value: pt
+          - text: 中文
+            value: zh
+      readonly: false
+      required: false
+      searchable: true
+      sort: 5
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: half
+    schema:
+      name: lang
+      table: site_stats
+      data_type: varchar
+      default_value: null
+      max_length: 8
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: site_stats
+    field: label
+    type: string
+    meta:
+      collection: site_stats
+      conditions: null
+      display: null
+      display_options: null
+      field: label
+      group: null
+      hidden: false
+      interface: input
+      note: Título de la página
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 6
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: half
+    schema:
+      name: label
+      table: site_stats
+      data_type: varchar
+      default_value: null
+      max_length: 120
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: site_stats
+    field: count
+    type: integer
+    meta:
+      collection: site_stats
+      conditions: null
+      display: null
+      display_options: null
+      field: count
+      group: null
+      hidden: false
+      interface: input
+      note: null
+      options: null
+      readonly: false
+      required: true
+      searchable: true
+      sort: 7
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: half
+    schema:
+      name: count
+      table: site_stats
+      data_type: integer
+      default_value: 0
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: site_stats
+    field: site
+    type: integer
+    meta:
+      collection: site_stats
+      conditions: null
+      display: null
+      display_options: null
+      field: site
+      group: null
+      hidden: false
+      interface: select-dropdown-m2o
+      note: null
+      options:
+        template: '{{name}}'
+      readonly: false
+      required: true
+      searchable: true
+      sort: 8
+      special:
+        - m2o
+      translations: null
+      validation: null
+      validation_message: null
+      width: half
+    schema:
+      name: site
+      table: site_stats
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
   - collection: sites
     field: id
     type: integer
@@ -7786,6 +8150,19 @@ relations:
       many_field: languages_code
       one_allowed_collections: null
       one_collection: languages
+      one_collection_field: null
+      one_deselect_action: nullify
+      one_field: null
+      sort_field: null
+  - collection: site_stats
+    field: site
+    related_collection: sites
+    meta:
+      junction_field: null
+      many_collection: site_stats
+      many_field: site
+      one_allowed_collections: null
+      one_collection: sites
       one_collection_field: null
       one_deselect_action: nullify
       one_field: null
