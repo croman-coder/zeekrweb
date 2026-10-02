@@ -55,6 +55,26 @@ PHONES = [
     ("Postventa", "0974 772 247", "+595974772247"),
 ]
 
+# Ciudad del Este (desde el 02/10/2026): ZEEKR no tiene equipo propio ahí; los contactos de CDE van al equipo multimarca de
+# Santa Rosa CDE (el mismo número que usan las otras marcas). El formulario manda sucursal="cde" a la API de leads.
+WA_CDE = "595991702176"
+PHONE_CDE = ("Ventas Ciudad del Este", "0991 702 176", "+595991702176")
+WA_SUCURSALES = (("asuncion", "Asunción y resto del país"), ("cde", "Ciudad del Este"))
+
+
+def phones_all():
+    """Teléfonos del sitio (CMS o código) con el de Ciudad del Este justo después del último de Ventas."""
+    out = list(PHONES)
+    idx = max((i for i, p in enumerate(out) if p[0] == "Ventas"), default=len(out) - 1)
+    out.insert(idx + 1, PHONE_CDE)
+    return out
+
+
+def wa_display(n):
+    """595971370006 -> 0971 370 006"""
+    return f"0{n[3:6]} {n[6:9]} {n[9:]}" if n.startswith("595") and len(n) == 12 else n
+
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(ROOT)
 
@@ -712,7 +732,7 @@ def header(active="", alts=None):
     <a class="header-wordmark" href="{url_home()}" aria-label="{esc(_("ZEEKR Paraguay — Inicio"))}">{WORDMARK_SVG}</a>
     <div class="header-right">
       <button class="menu-link" type="button" data-open-contact data-intent="contacto">{_("Contáctanos")}</button>
-      <a class="header-wa" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" aria-label="{esc(_("WhatsApp ZEEKR Paraguay"))}">{ICON_WA}</a>
+      <a class="header-wa" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" data-sucursal-wa aria-label="{esc(_("WhatsApp ZEEKR Paraguay"))}">{ICON_WA}</a>
       {lang_switcher(alts)}
       <button class="burger" type="button" aria-label="{esc(_("Abrir menú"))}" aria-expanded="false" aria-controls="mobileMenu" data-open-menu><span></span><span></span></button>
     </div>
@@ -764,7 +784,7 @@ def header(active="", alts=None):
 
 
 def footer():
-    phones = "".join(f'<li><a href="tel:{tel}"><span class="ph-kind">{_(kind)}</span> {num}</a></li>' for kind, num, tel in PHONES)
+    phones = "".join(f'<li><a href="tel:{tel}"><span class="ph-kind">{_(kind)}</span> {num}</a></li>' for kind, num, tel in phones_all())
     model_links = "\n        ".join(f'<li><a href="{url_model(k)}">{MODELS[k]["name"]}</a></li>' for k in MODEL_ORDER)
     tagline = setting("footer_tagline", FOOTER_TAGLINE)
     disclaimer = setting("legal_disclaimer", LEGAL_DISCLAIMER)
@@ -775,7 +795,7 @@ def footer():
             icons.append(f'<a href="{s["url"]}" rel="noopener" target="_blank" aria-label="{esc(_("Instagram de ZEEKR Paraguay"))}">\n          {SOCIAL_SVG["instagram"]}\n        </a>')
         elif s["network"] in SOCIAL_SVG:
             icons.append(f'<a href="{s["url"]}" rel="noopener" target="_blank" aria-label="{esc(_(SOCIAL_LABEL[s["network"]]))}">\n          {SOCIAL_SVG[s["network"]]}\n        </a>')
-    wa = f'<a href="https://wa.me/{WA_NUMBER}" rel="noopener" target="_blank" aria-label="{esc(_("WhatsApp de ZEEKR Paraguay"))}">{ICON_WA}</a>'
+    wa = f'<a href="https://wa.me/{WA_NUMBER}" rel="noopener" target="_blank" data-sucursal-wa aria-label="{esc(_("WhatsApp de ZEEKR Paraguay"))}">{ICON_WA}</a>'
     social_html = "\n        ".join([icons[0], wa] + icons[1:]) if icons else wa   # orden actual: Instagram, WhatsApp, LinkedIn
     return f'''
 <footer class="site-footer">
@@ -816,12 +836,14 @@ def footer():
     <p class="footer-disclaimer">{_(disclaimer)}</p>
   </div>
 </footer>
-{contact_modal()}'''
+{contact_modal()}
+{wa_chooser()}'''
 
 
 def contact_modal():
-    cards = "".join(f'<a class="contact-card" href="tel:{tel}"><span>{_(kind)}</span><strong>{num}</strong></a>' for kind, num, tel in PHONES)
+    cards = "".join(f'<a class="contact-card" href="tel:{tel}"><span>{_(kind)}</span><strong>{num}</strong></a>' for kind, num, tel in phones_all())
     options = "".join(f'<option value="{MODELS[k]["name"]}">{MODELS[k]["name"]}</option>' for k in MODEL_ORDER)
+    sucursales = "".join(f'<option value="{v}">{_(label)}</option>' for v, label in WA_SUCURSALES)
     return f'''
 <div class="modal-contact" id="contactModal" hidden role="dialog" aria-modal="true" aria-labelledby="cmTitle">
   <div class="modal-mask" data-close-contact></div>
@@ -833,10 +855,10 @@ def contact_modal():
     <div class="modal-channels">
       <p class="modal-or" data-m="channels">{_("¿Preferís hablar ahora?")}</p>
       <div class="contact-cards">{cards}</div>
-      <a class="btn btn-outline-dark btn-block" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" data-m-wa><span>{_("Escribinos por WhatsApp")}</span>{ICON_WA}</a>
+      <a class="btn btn-outline-dark btn-block" href="https://wa.me/{WA_NUMBER}" target="_blank" rel="noopener" data-sucursal-wa data-m-wa><span>{_("Escribinos por WhatsApp")}</span>{ICON_WA}</a>
     </div>
     <p class="modal-or modal-or-form" data-m="form" hidden>{_("O dejanos tu consulta y te llamamos")}</p>
-    <form id="waForm" class="contact-form" data-wa="{WA_NUMBER}" novalidate>
+    <form id="waForm" class="contact-form" data-wa="{WA_NUMBER}" data-wa-cde="{WA_CDE}" novalidate>
       <input type="hidden" name="tipo" value="Prueba de manejo">
       <input type="hidden" name="idioma" value="{L}">
       <div class="field">
@@ -848,6 +870,11 @@ def contact_modal():
         <label for="cf-tel">{_("Teléfono")}</label>
         <input id="cf-tel" type="tel" name="telefono" required autocomplete="tel" inputmode="tel" placeholder="{esc(_("Ej.: 0981 123 456"))}">
         <p class="field-error" id="cf-tel-error" hidden>{_("Ingresá un teléfono válido (ej.: 0981 123 456).")}</p>
+      </div>
+      <div class="field">
+        <label for="cf-sucursal">{_("Sucursal más cercana")}</label>
+        <select id="cf-sucursal" name="sucursal" required autocomplete="off"><option value="" selected disabled>{_("Elegí una sucursal")}</option>{sucursales}</select>
+        <p class="field-error" id="cf-sucursal-error" hidden>{_("Elegí la sucursal más cercana para derivarte al equipo correcto.")}</p>
       </div>
       <div class="field">
         <label for="cf-modelo">{_("Modelo de interés")}</label>
@@ -875,6 +902,25 @@ def contact_modal():
 </div>'''
 
 
+def wa_chooser():
+    """Diálogo "¿Con qué sucursal querés hablar?": main.js lo abre al tocar un enlace con data-sucursal-wa (todos los de WhatsApp de ventas)."""
+    nums = {"asuncion": WA_NUMBER, "cde": WA_CDE}
+    opts = "".join(
+        f'<a class="wc-opt" href="https://wa.me/{nums[v]}" target="_blank" rel="noopener" data-wc-opt="{v}">'
+        f'<span class="wc-name">{_(label)}</span><span class="wc-num">{wa_display(nums[v])}</span>{ICON_WA}</a>'
+        for v, label in WA_SUCURSALES)
+    return f'''
+<dialog class="wa-chooser" id="waChooser" aria-labelledby="wcTitle">
+  <div class="modal-panel" tabindex="-1">
+    <button class="modal-close" type="button" aria-label="{esc(_("Cerrar"))}" data-wc-close><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <p class="eyebrow eyebrow-dark">WhatsApp</p>
+    <h2 id="wcTitle">{_("¿Con qué sucursal querés hablar?")}</h2>
+    <p class="modal-sub">{_("Elegí la más cercana y seguís la conversación por WhatsApp.")}</p>
+    <div class="wc-options">{opts}</div>
+  </div>
+</dialog>'''
+
+
 def js_i18n():
     """Textos que usa main.js, por idioma."""
     return {
@@ -882,7 +928,7 @@ def js_i18n():
         "fix": _("Revisá los campos marcados para continuar."),
         "fallback": _("No pudimos registrar la consulta en el sistema; te llevamos a WhatsApp para que un asesor te atienda igual."),
         "waIntro": {"Consulta": _("Hola ZEEKR Paraguay, quiero hacer una consulta."), "Prueba de manejo": _("Hola ZEEKR Paraguay, quiero coordinar una prueba de manejo.")},
-        "waLabels": {"nombre": _("Nombre"), "telefono": _("Teléfono"), "modelo": _("Modelo de interés"), "mensaje": _("Mensaje")},
+        "waLabels": {"nombre": _("Nombre"), "telefono": _("Teléfono"), "sucursal": _("Sucursal"), "modelo": _("Modelo de interés"), "mensaje": _("Mensaje")},
         "origin": _("Origen"),
         "advisor": _("{name} te contacta en el día."),
         "advisorDefault": _("Un asesor te contacta en el día."),
@@ -992,6 +1038,7 @@ def contact_points():
     pts = [{"@type": "ContactPoint", "telephone": fmt(sales[2]), "contactType": "sales", "areaServed": "PY", "availableLanguage": list(LANGS)}] if sales else []
     if cs:
         pts.append({"@type": "ContactPoint", "telephone": fmt(cs[2]), "contactType": "customer service", "areaServed": "PY", "availableLanguage": ["es"]})
+    pts.append({"@type": "ContactPoint", "telephone": fmt(PHONE_CDE[2]), "contactType": "sales", "areaServed": "Ciudad del Este", "availableLanguage": ["es"]})
     return pts
 
 
@@ -1057,7 +1104,7 @@ def faq_block(qa, title="Preguntas frecuentes", kicker="Te ayudamos"):
 def contact_strip(model_name=None):
     attr = f' data-model="{model_name}"' if model_name else ""
     groups = {}
-    for kind, num, tel in PHONES:
+    for kind, num, tel in phones_all():
         groups.setdefault(kind, []).append(f'<a href="tel:{tel}">{num.replace(" ", "&nbsp;")}</a>')
     phones = " · ".join(f"{_(kind)}: " + " · ".join(links) for kind, links in groups.items())
     return f'''
@@ -1070,7 +1117,7 @@ def contact_strip(model_name=None):
     </div>
     <div class="contact-actions">
       {btn(_("Agendá tu prueba de manejo"), kind="accent", attrs=' data-open-contact data-intent="test-drive"' + attr)}
-      {btn(_("Escribinos por WhatsApp"), href=f"https://wa.me/{WA_NUMBER}", kind="outline", icon=ICON_WA, attrs=' target="_blank" rel="noopener"')}
+      {btn(_("Escribinos por WhatsApp"), href=f"https://wa.me/{WA_NUMBER}", kind="outline", icon=ICON_WA, attrs=' target="_blank" rel="noopener" data-sucursal-wa')}
     </div>
   </div>
 </section>'''
@@ -1548,7 +1595,7 @@ def build_meta():
             "## Modelos", *[f"- [{MODELS[k]['name']}]({DOMAIN}/modelos/{MODELS[k]['slug']}/): {MODELS[k]['tagline']}. {MODELS[k]['schema_desc']}" for k in MODEL_ORDER], "",
             "## Datos clave", "- ZEEKR 7X: 800 V, 0–100 km/h en 3,8 s (Performance), hasta 543 km WLTP; garantía 5 años/100.000 km (vehículo) y 8 años/160.000 km (batería).",
             "- ZEEKR X: hasta 440 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 69 kWh.", "- ZEEKR 001: hasta 620 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 100 kWh, carga 10–80 % en <30 min (200 kW DC).",
-            "- Contacto ventas: +595 971 370 006 · Postventa: +595 974 772 247 · WhatsApp: https://wa.me/595971370006", "",
+            "- Contacto ventas: +595 971 370 006 · Ventas Ciudad del Este: +595 991 702 176 · Postventa: +595 974 772 247", f"- WhatsApp: https://wa.me/{WA_NUMBER} (Asunción y resto del país) · https://wa.me/{WA_CDE} (Ciudad del Este)", "",
             "## Páginas", f"- [Inicio]({DOMAIN}/)", f"- [Modelos]({DOMAIN}/modelos/)", f"- [Noticias]({DOMAIN}/noticias/)", f"- [Nosotros]({DOMAIN}/nosotros/)",
             *[f"- [{n['title']}]({DOMAIN}/noticias/{n['slug']}/)" for n in NEWS if n.get("body")], "",
             "## Idiomas", f"- English: {DOMAIN}/en/", f"- Português: {DOMAIN}/pt/", f"- 中文: {DOMAIN}/zh/", "",

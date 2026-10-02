@@ -13,6 +13,32 @@ Variables de entorno: ver cabecera de `functions/_lib/lead.js`. Local:
 BITRIX_WEBHOOK_URL=... PORT=8801 node api/server.mjs
 ```
 
+## Sucursal Ciudad del Este (desde el 02/10/2026)
+
+Pedido de Gerencia Comercial (mail de Bruno Capossela del 01/10/2026, "Filtros WEB Sucursal CDE - Todas las marcas"): los
+contactos de Ciudad del Este (CDE) van directo al equipo comercial de esa zona. **ZEEKR no tiene equipo propio en CDE**
+(en Bitrix los equipos de CDE son 135 Soueast+Jetour, 137 GWM, 139 Mitsubishi y 141 JAC+Renault+Leapmotor), así que sus
+contactos de CDE van al **equipo multimarca de CDE** (departamento 133): `+595 991 702 176` por WhatsApp/teléfono y, en
+Bitrix, el Jefe de Ventas Multimarcas CDE. Es el mismo criterio que Croman fijó para JMEV; el número y la persona son un
+supuesto razonable, no confirmado por escrito.
+
+- **Formulario** (modal de prueba de manejo / contacto): campo obligatorio "Sucursal más cercana", sin valor por defecto.
+  El POST lleva `sucursal: "asuncion" | "cde"`. Un cliente viejo que no lo manda se trata como Asunción (reparto de siempre).
+- **WhatsApp**: todos los enlaces de ventas (encabezado, pie, franja de contacto, modal) llevan `data-sucursal-wa` y abren el
+  diálogo `#waChooser` ("¿Con qué sucursal querés hablar?") con los dos números: Asunción `WA_NUMBER` (`595971370006`) y CDE
+  `WA_CDE` (`595991702176`). "Continuar por WhatsApp" y el respaldo del formulario usan el número de la sucursal elegida.
+  Abrir el diálogo no cuenta como clic a WhatsApp; el clic cuenta al elegir (`click_whatsapp` con `sucursal`).
+- **Teléfonos**: "Ventas Ciudad del Este 0991 702 176" (`PHONE_CDE` en `build_site.py`; se suma a los del CMS justo después del
+  último "Ventas": pie, franja de contacto, tarjetas del modal, JSON-LD y `llms.txt`).
+- **API**: `sucursal="cde"` → el lead va a `CDE_ADVISOR_IDS` (cola justa propia, no cuenta la de Asunción), con `ADDRESS_CITY`
+  = Ciudad del Este, "Sucursal elegida" en los comentarios y en la descripción del origen. Sin asesores → `CDE_FALLBACK_ASSIGNEE_ID`
+  (nunca el responsable de Asunción). Variables (app 17): `CDE_ADVISOR_IDS=21707` · `CDE_DEPARTMENT_ID=133` ·
+  `CDE_FALLBACK_ASSIGNEE_ID=21707`. Para sumar a alguien al reparto de CDE: agregar su ID a `CDE_ADVISOR_IDS` y redesplegar la app 17.
+- **Qué NO está en el código**: las preguntas frecuentes ("Escribinos por WhatsApp al 0971 370 006…") y la lista de teléfonos del CMS
+  viven en Directus; si se quiere nombrar el número de CDE en las FAQ se edita ahí.
+- **Pruebas**: `node --test api/*.test.mjs` (la API) y `node scripts/qa-sucursal.mjs <base>` (Chromium real: selector, formulario en
+  los 4 idiomas, respaldo, móvil; no toca el CRM: intercepta `/api/lead` y `wa.me`). Local: `python3 -m http.server 8812` en la raíz del repo.
+
 ## Estadísticas (`POST /api/hit`, solo en Coolify)
 
 `js/main.js` manda con `navigator.sendBeacon` una visita por página (`{k:"view", p:location.pathname, t:document.title}`)

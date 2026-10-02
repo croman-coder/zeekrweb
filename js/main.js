@@ -15,7 +15,7 @@
   /* Deja inerte todo lo que no sea el panel abierto (header/main/footer). */
   function setInertOutside(panel, on) {
     $$("body > *").forEach(function (el) {
-      if (el === panel || el.contains(panel) || el.tagName === "SCRIPT") return;
+      if (el === panel || el.contains(panel) || el.tagName === "SCRIPT" || el.id === "waChooser") return;
       if (on) el.setAttribute("inert", ""); else el.removeAttribute("inert");
     });
   }
@@ -59,8 +59,41 @@
   });
   function fbViewContent() { if (pageModel) fbTrack("ViewContent", { content_name: pageModel, content_category: "ZEEKR" }); }
   fbViewContent();
+  /* ----- WhatsApp por sucursal: los enlaces de ventas (data-sucursal-wa) abren antes "¿Con qué sucursal querés hablar?".
+     Los contactos de Ciudad del Este van al equipo de esa zona (pedido de Gerencia Comercial, 01/10/2026). ----- */
+  var chooser = $("#waChooser");
+  var chooserFrom = "contenido", chooserOpener = null, chooserLocked = false;
+  function openChooser(a) {
+    chooserFrom = waLocation(a);
+    chooserOpener = a;
+    chooserLocked = doc.documentElement.style.overflow !== "hidden";   // si el modal de contacto ya bloqueó el scroll, no lo toco
+    if (chooserLocked) lockScroll(true);
+    chooser.showModal();
+    var panel = $(".modal-panel", chooser); if (panel) panel.focus();
+  }
+  function closeChooser() { if (chooser && chooser.open) chooser.close(); }
+  if (chooser && typeof chooser.showModal === "function") {
+    doc.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest("a[data-sucursal-wa]");
+      if (!a) return;
+      e.preventDefault(); e.stopImmediatePropagation();   // todavía no fue a WhatsApp: no cuenta como clic (cuenta el de la opción)
+      openChooser(a);
+    }, true);
+    chooser.addEventListener("click", function (e) {
+      if (e.target === chooser || e.target.closest("[data-wc-close]")) { closeChooser(); return; }   // el fondo oscuro o la X
+      if (e.target.closest("a.wc-opt")) setTimeout(closeChooser, 0);                                 // WhatsApp se abre en otra pestaña
+    });
+    chooser.addEventListener("keydown", function (e) { if (e.key === "Escape") e.stopPropagation(); });   // Esc cierra solo este diálogo, no el modal de contacto de abajo
+    chooser.addEventListener("close", function () {
+      if (chooserLocked) lockScroll(false);
+      chooserLocked = false;
+      if (chooserOpener && chooserOpener.isConnected && chooserOpener.focus) chooserOpener.focus();
+    });
+  }
+
   /* Dónde estaba el enlace: el mismo parámetro "location" que mandan las otras webs de marca. */
   function waLocation(a) {
+    if (a.closest("#waChooser")) return chooserFrom;
     if (a.closest("header")) return "header";
     if (a.closest("footer")) return "footer";
     if (a.closest("form, #contactModal, .contact-strip")) return "formulario";
@@ -70,7 +103,8 @@
     var a = e.target.closest && e.target.closest('a[href*="wa.me/"], a[href*="whatsapp.com/"]');
     if (!a) return;
     statHit("whatsapp"); fbTrack("Contact");
-    if (window.gtag) window.gtag("event", "click_whatsapp", { location: waLocation(a) });
+    var suc = a.getAttribute("data-wc-opt");   // solo los del selector: a qué sucursal fue
+    if (window.gtag) window.gtag("event", "click_whatsapp", suc ? { location: waLocation(a), sucursal: suc } : { location: waLocation(a) });
   }, true);
 
   /* ----- header: fondo al scrollear ----- */
@@ -223,16 +257,19 @@
     if (err) { if (on) input.setAttribute("aria-describedby", err.id); else input.removeAttribute("aria-describedby"); }
   }
   function waUrl(form) {
-    var labels = I18N.waLabels || { nombre: "Nombre", telefono: "Teléfono", modelo: "Modelo de interés", mensaje: "Mensaje" };
-    var lines = ["nombre", "telefono", "modelo", "mensaje"].map(function (k) {
-      var el = form.elements[k]; return el && el.value.trim() ? labels[k] + ": " + el.value.trim() : null;
+    var labels = I18N.waLabels || { nombre: "Nombre", telefono: "Teléfono", sucursal: "Sucursal", modelo: "Modelo de interés", mensaje: "Mensaje" };
+    var suc = form.elements.sucursal;
+    var lines = ["nombre", "telefono", "sucursal", "modelo", "mensaje"].map(function (k) {
+      var el = form.elements[k];
+      if (!el || !el.value.trim()) return null;
+      return labels[k] + ": " + (k === "sucursal" ? el.options[el.selectedIndex].text : el.value.trim());   // la sucursal, con el texto del idioma
     }).filter(Boolean);
     lines.push(tr("origin", "Origen") + ": zeekrlife.com.py");
     var tipo = form.elements.tipo ? form.elements.tipo.value : "Prueba de manejo";
     var intros = I18N.waIntro || { "Consulta": "Hola ZEEKR Paraguay, quiero hacer una consulta.", "Prueba de manejo": "Hola ZEEKR Paraguay, quiero coordinar una prueba de manejo." };
     var intro = intros[tipo] || intros["Prueba de manejo"];
     var text = intro + "\n" + lines.join("\n");
-    return "https://wa.me/" + form.getAttribute("data-wa") + "?text=" + encodeURIComponent(text);
+    return "https://wa.me/" + form.getAttribute(suc && suc.value === "cde" ? "data-wa-cde" : "data-wa") + "?text=" + encodeURIComponent(text);
   }
   function showSuccess(form, data, wa) {
     var box = form.parentNode.querySelector(".form-success");
@@ -256,16 +293,18 @@
     var btn = form.querySelector("[type=submit]"); if (btn) { btn.disabled = false; btn.querySelector("span").textContent = btn.getAttribute("data-label"); }
   }
   function submitLead(form) {
-    var nombre = form.elements.nombre, tel = form.elements.telefono;
+    var nombre = form.elements.nombre, tel = form.elements.telefono, suc = form.elements.sucursal;
     var okName = nombre.value.trim().length >= 2;
     var okTel = (tel.value.replace(/\D/g, "").length >= 6);
-    setError(nombre, !okName); setError(tel, !okTel);
+    var okSuc = !suc || suc.value !== "";   // sin sucursal elegida no se envía: de eso depende qué equipo atiende
+    setError(nombre, !okName); setError(tel, !okTel); if (suc) setError(suc, !okSuc);
     var status = $(".form-status", form);
-    if (!okName || !okTel) { (okName ? tel : nombre).focus(); if (status) status.textContent = tr("fix", "Revisá los campos marcados para continuar."); return; }
+    if (!okName || !okTel || !okSuc) { (!okName ? nombre : !okTel ? tel : suc).focus(); if (status) status.textContent = tr("fix", "Revisá los campos marcados para continuar."); return; }
     var btn = form.querySelector("[type=submit]");
     var wa = waUrl(form);
     var payload = {
       nombre: nombre.value.trim(), telefono: tel.value.trim(),
+      sucursal: suc ? suc.value : null,
       modelo: form.elements.modelo.value, mensaje: (form.elements.mensaje.value || "").trim() || null,
       tipo: form.elements.tipo ? form.elements.tipo.value : "Prueba de manejo",
       pagina: location.href.split("#")[0], website: form.elements.website ? form.elements.website.value : "",
@@ -281,14 +320,14 @@
       .then(function (res) {
         clearTimeout(t);
         if (!res.ok) throw new Error(res.data && res.data.detail ? String(res.data.detail) : "error");
-        if (window.gtag) window.gtag("event", "generate_lead", { form: payload.tipo, method: "web_form", model: payload.modelo });
+        if (window.gtag) window.gtag("event", "generate_lead", { form: payload.tipo, method: "web_form", model: payload.modelo, sucursal: payload.sucursal });
         fbTrack("Lead", { content_name: payload.tipo });  // solo con el lead registrado (no en el respaldo a WhatsApp)
         showSuccess(form, res.data, wa);
       })
       .catch(function () {
         clearTimeout(t);
         /* respaldo: el lead no se pierde, va directo por WhatsApp */
-        if (window.gtag) window.gtag("event", "generate_lead", { form: payload.tipo, method: "whatsapp_fallback", model: payload.modelo });
+        if (window.gtag) window.gtag("event", "generate_lead", { form: payload.tipo, method: "whatsapp_fallback", model: payload.modelo, sucursal: payload.sucursal });
         window.open(wa, "_blank", "noopener");
         if (status) status.textContent = tr("fallback", "No pudimos registrar la consulta en el sistema; te llevamos a WhatsApp para que un asesor te atienda igual.");
         btn.disabled = false; btn.querySelector("span").textContent = btn.getAttribute("data-label");
@@ -298,7 +337,9 @@
     var form = e.target.closest("form");
     if (form && form.id === "waForm") { e.preventDefault(); submitLead(form); }
   });
-  $$("#waForm input").forEach(function (i) { i.addEventListener("input", function () { if (i.getAttribute("aria-invalid") === "true") setError(i, false); }); });
+  $$("#waForm input, #waForm select").forEach(function (i) {
+    ["input", "change"].forEach(function (ev) { i.addEventListener(ev, function () { if (i.getAttribute("aria-invalid") === "true") setError(i, false); }); });
+  });
 
   /* ----- hero: carrusel ----- */
   var hero = $("#hero");

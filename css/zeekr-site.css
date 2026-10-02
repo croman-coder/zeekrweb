@@ -317,6 +317,18 @@ html[lang="zh-Hans"] h1,html[lang="zh-Hans"] h2,html[lang="zh-Hans"] h3{letter-s
 .contact-card:hover{border-color:#0A0A0A;background:var(--paper-2)}
 .contact-card span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--grey)}
 .contact-card strong{font:400 16px/1.2 var(--font-head);color:#0A0A0A;font-variant-numeric:tabular-nums}
+.contact-cards .contact-card:last-child:nth-child(odd){grid-column:1/-1}
+/* selector "¿Con qué sucursal querés hablar?" (<dialog>; usa el panel del modal de contacto) */
+.wa-chooser{border:0;padding:0;margin:auto;background:transparent;color:var(--rock);width:min(480px,calc(100% - 32px));max-width:none;max-height:none;overflow:visible}
+.wa-chooser::backdrop{background:rgba(0,0,0,.7);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.wa-chooser .modal-panel{width:100%}
+.wa-chooser .modal-panel:focus{outline:none}
+.wc-options{order:3;display:grid;gap:12px;margin-top:22px}
+.wc-opt{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:16px;row-gap:2px;border:1px solid var(--line-dark);border-radius:14px;padding:16px 18px;transition:border-color .25s,background-color .25s}
+.wc-opt:hover,.wc-opt:focus-visible{border-color:#0A0A0A;background:var(--paper-2);outline:none}
+.wc-name{font:400 17px/1.25 var(--font-head);color:#0A0A0A}
+.wc-num{grid-column:1;font-size:13px;color:var(--grey);font-variant-numeric:tabular-nums}
+.wc-opt .ico{grid-column:2;grid-row:1/3;width:26px;height:26px;color:#0A0A0A}
 .contact-form{display:grid;gap:16px}
 .contact-form[hidden],.modal-channels[hidden],.contact-cards[hidden],.modal-sub[hidden],.modal-or[hidden]{display:none}
 .field{display:grid;gap:6px}
@@ -326,7 +338,9 @@ html[lang="zh-Hans"] h1,html[lang="zh-Hans"] h2,html[lang="zh-Hans"] h3{letter-s
 .contact-form textarea{resize:vertical;min-height:72px}
 .contact-form input::placeholder,.contact-form textarea::placeholder{color:#a3a7aa}
 .contact-form input:focus-visible,.contact-form select:focus-visible,.contact-form textarea:focus-visible{outline:none;border-color:#0A0A0A;box-shadow:0 0 0 3px rgba(36,41,43,.12)}
-.field.has-error input{border-color:#C6362A}
+.field.has-error input,.field.has-error select{border-color:#C6362A}
+.contact-form select:invalid{color:#a3a7aa}
+.contact-form select option{color:#0A0A0A}
 .field-error{font-size:13px;color:#C6362A}
 .field-error[hidden]{display:none}
 .form-status{font-size:14px;color:var(--rock);min-height:1em;margin-top:-4px}
