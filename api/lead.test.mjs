@@ -47,6 +47,8 @@ const TEAM = [
 const CDE = [
   { ID: "21707", NAME: "WALTER", LAST_NAME: "BAVERA", WORK_POSITION: "Jefe de Ventas Multimarcas CDE", UF_DEPARTMENT: [133] },
   { ID: "39", NAME: "BRUNO", LAST_NAME: "CAPOSSELA", WORK_POSITION: "Gerente de Ventas", UF_DEPARTMENT: [133] },
+  { ID: "16001", NAME: "MATHIAS", LAST_NAME: "ACOSTA", WORK_POSITION: "ASESOR RENAULT JAC CDE", UF_DEPARTMENT: [141] },
+  { ID: "19827", NAME: "PEDRO", LAST_NAME: "OCAMPOS", WORK_POSITION: "ASESOR DE VENTAS", UF_DEPARTMENT: [141] },
 ];
 const ALL = [...TEAM, ...CDE];
 const good = { nombre: "Ana Martínez", telefono: "0981 123 456", modelo: "ZEEKR 7X", mensaje: "Quiero probarlo" };
@@ -118,6 +120,29 @@ describe("Sucursal Ciudad del Este (CDE)", () => {
     assert.equal(r.asesor, null);                                // el de reserva no figura en el equipo: la pantalla dice "Un asesor te contacta"
     assert.equal(added(bx)[0].ASSIGNED_BY_ID, 21707);
     assert.equal(bx.calls.find((c) => c.method === "user.get").body.filter.UF_DEPARTMENT, 133);
+  });
+  test("configuración de producción (CDE_ADVISOR_IDS=16001,19827): los de CDE rotan entre Mathias y Pedro y nunca caen en Asunción ni en el jefe", async () => {
+    const bx = use(fakeBitrix({ users: ALL }));
+    const env = { ...ENV, CDE_ADVISOR_IDS: "16001,19827" };
+    const got = [];
+    for (let i = 0; i < 6; i++) {
+      resetState();
+      const r = await createLead(cdeBody, env);
+      assert.equal(r.sucursal, "cde");
+      got.push(added(bx).at(-1).ASSIGNED_BY_ID);
+    }
+    assert.ok(got.every((id) => [16001, 19827].includes(id)), `solo Mathias y Pedro: ${got}`);
+    assert.deepEqual([...new Set(added(bx).map((f) => f.ADDRESS_CITY))], ["Ciudad del Este"]);
+    // y con la cola actualizándose alternan
+    const alt = use(fakeBitrix({ users: ALL }));
+    const seq = [];
+    for (let i = 0; i < 4; i++) {
+      resetState();
+      const a = await nextAdvisor(env, "cde");
+      seq.push(a.id);
+      alt.leads.push({ ID: 5000 + i, SOURCE_ID: "WEB_SR_ZEEKR", ASSIGNED_BY_ID: a.id });
+    }
+    assert.deepEqual(seq, [16001, 19827, 16001, 19827]);
   });
   test("CDE_ADVISOR_IDS explícito arma el equipo de CDE y rota entre ellos", async () => {
     const bx = use(fakeBitrix({ users: ALL }));

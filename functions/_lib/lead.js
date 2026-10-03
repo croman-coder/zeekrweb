@@ -8,11 +8,13 @@
  *
  * env: BITRIX_WEBHOOK_URL (obligatoria) · ZEEKR_DEPARTMENT_ID=29 · LEAD_SOURCE_ID=WEB_SR_ZEEKR
  *      BRAND_FIELD=UF_CRM_1775591500778 · BRAND_VALUE=301 · FALLBACK_ASSIGNEE_ID=73 · ADVISOR_IDS="139,2171"
- *      Sucursal Ciudad del Este: si el formulario manda sucursal="cde", el lead va al equipo multimarca de CDE
- *      (ZEEKR no tiene equipo propio en CDE; en Bitrix es el departamento 133 "MULTIMARCAS CDE")
- *        CDE_ADVISOR_IDS="21707,…"      (opcional) pool explícito de CDE; sin esto: departamento CDE_DEPARTMENT_ID + cargo ASESOR
+ *      Sucursal Ciudad del Este: si el formulario manda sucursal="cde", el lead va a los asesores de CDE
+ *      (ZEEKR no tiene equipo propio en CDE: en producción CDE_ADVISOR_IDS="16001,19827" = Mathias Acosta y Pedro Ocampos, del
+ *      departamento 141 "JAC RENAULT & LEAPMOTOR CDE", que ya están en la cola de ZEEKR de Bitrix; cambiado el 03/10/2026, antes
+ *      iba todo al jefe)
+ *        CDE_ADVISOR_IDS="16001,19827"  (opcional) pool explícito de CDE; sin esto: departamento CDE_DEPARTMENT_ID + cargo ASESOR
  *        CDE_DEPARTMENT_ID=133          "MULTIMARCAS CDE"
- *        CDE_FALLBACK_ASSIGNEE_ID=21707 Jefe de Ventas Multimarcas CDE: recibe el lead si ese equipo no tiene asesores activos
+ *        CDE_FALLBACK_ASSIGNEE_ID=21707 Walter Bavera, Jefe de Ventas Multimarcas CDE: recibe el lead si ese equipo no tiene asesores activos
  *
  * Estadísticas: handle() recibe opcionalmente { stats } (functions/_lib/stats.js, solo en el servidor Node)
  * y cuenta un "lead" por cada lead creado en Bitrix. Sin stats (Cloudflare Pages) todo sigue igual.
