@@ -1,4 +1,4 @@
-// QA del filtro de sucursal (Asunción / Ciudad del Este) de ZEEKR Paraguay, con Chromium real.
+// QA del filtro de zona (Asunción / Ciudad del Este / otras zonas) de ZEEKR Paraguay, con Chromium real.
 //   node scripts/qa-sucursal.mjs [base]          base por defecto: http://127.0.0.1:8812 (python3 -m http.server 8812 en la raíz del repo)
 //   PLAYWRIGHT=/ruta/a/playwright/index.mjs CHROME=/usr/bin/google-chrome SHOTS=/ruta/capturas node scripts/qa-sucursal.mjs <base>
 // No toca el CRM: /api/lead se intercepta (page.route) y los enlaces a wa.me se responden con un stub, así que sirve igual
@@ -14,10 +14,10 @@ const { chromium } = await import(PW);
 
 const WA_ASU = "595971370006", WA_CDE = "595972350200";
 const LANGS = [
-  { p: "", name: "es", h2: "¿Con qué sucursal querés hablar?", ph: "Elegí una sucursal", asu: "Asunción y resto del país", cde: "Ciudad del Este", suc: "Sucursal" },
-  { p: "/en", name: "en", h2: "Which branch would you like to talk to?", ph: "Choose a branch", asu: "Asunción and the rest of the country", cde: "Ciudad del Este", suc: "Branch" },
-  { p: "/pt", name: "pt", h2: "Com qual filial você quer falar?", ph: "Escolha uma filial", asu: "Assunção e resto do país", cde: "Ciudad del Este", suc: "Filial" },
-  { p: "/zh", name: "zh", h2: "您想联系哪家门店？", ph: "请选择门店", asu: "亚松森及巴拉圭其他地区", cde: "东方市", suc: "门店" },
+  { p: "", name: "es", h2: "¿Con qué sucursal querés hablar?", lab: "Zona", ph: "Elegí tu zona", asu: "Asunción", cde: "Ciudad del Este", otr: "Otras zonas", suc: "Sucursal" },
+  { p: "/en", name: "en", h2: "Which branch would you like to talk to?", lab: "Area", ph: "Choose your area", asu: "Asunción", cde: "Ciudad del Este", otr: "Other areas", suc: "Branch" },
+  { p: "/pt", name: "pt", h2: "Com qual filial você quer falar?", lab: "Região", ph: "Escolha sua região", asu: "Assunção", cde: "Ciudad del Este", otr: "Outras regiões", suc: "Filial" },
+  { p: "/zh", name: "zh", h2: "您想联系哪家门店？", lab: "区域", ph: "请选择您所在的区域", asu: "亚松森", cde: "东方市", otr: "其他地区", suc: "门店" },
 ];
 
 let fails = 0, checks = 0;
@@ -58,9 +58,9 @@ for (const L of LANGS) {
   ok(await open(page), "el botón de WhatsApp del encabezado abre el selector (no sale directo a WhatsApp)");
   ok((await page.textContent("#wcTitle")).trim() === L.h2, `título: ${L.h2}`);
   const opts = await page.$$eval("#waChooser a.wc-opt", (as) => as.map((a) => ({ href: a.href, name: a.querySelector(".wc-name").textContent.trim(), num: a.querySelector(".wc-num").textContent.trim() })));
-  ok(opts.length === 2 && opts[0].href === `https://wa.me/${WA_ASU}` && opts[1].href === `https://wa.me/${WA_CDE}`, "dos opciones: Asunción y Ciudad del Este, con su número");
-  ok(opts[0].name === L.asu && opts[1].name === L.cde, `textos traducidos: ${L.asu} / ${L.cde}`);
-  ok(opts[0].num === "0971 370 006" && opts[1].num === "0972 350 200", "se ve el número de cada una");
+  ok(opts.length === 3 && opts[0].href === `https://wa.me/${WA_ASU}` && opts[1].href === `https://wa.me/${WA_CDE}` && opts[2].href === `https://wa.me/${WA_ASU}`, "tres opciones: Asunción, Ciudad del Este y Otras zonas (esta, con el número de Asunción)");
+  ok(opts[0].name === L.asu && opts[1].name === L.cde && opts[2].name === L.otr, `textos traducidos: ${L.asu} / ${L.cde} / ${L.otr}`);
+  ok(opts[0].num === "0971 370 006" && opts[1].num === "0972 350 200" && opts[2].num === "0971 370 006", "se ve el número de cada una");
   ok((await events(page)).length === 0, "abrir el selector no cuenta como clic a WhatsApp");
   await shot(page, `chooser-${L.name}`);
   const [popup] = await Promise.all([context.waitForEvent("page"), page.click('a.wc-opt[data-wc-opt="cde"]')]);
@@ -70,6 +70,13 @@ for (const L of LANGS) {
   ok(!(await open(page)), "el selector se cierra al elegir");
   const ev = await events(page);
   ok(ev.length === 1 && ev[0].sucursal === "cde" && ev[0].location === "header", `un solo click_whatsapp con sucursal=cde y location=header (${JSON.stringify(ev)})`);
+  // Otras zonas: abre el WhatsApp de Asunción y cuenta con sucursal=otras
+  await page.click(".header-wa");
+  ok(await open(page), "el selector se vuelve a abrir");
+  const [popup2] = await Promise.all([context.waitForEvent("page"), page.click('a.wc-opt[data-wc-opt="otras"]')]);
+  await popup2.waitForURL(/wa\.me/, { timeout: 8000 }).catch(() => {});
+  const ev2 = (await events(page)).at(-1);
+  ok(popup2.url().startsWith(`https://wa.me/${WA_ASU}`) && ev2?.sucursal === "otras" && ev2?.location === "header", `Otras zonas abre wa.me/${WA_ASU} y cuenta con sucursal=otras (${JSON.stringify(ev2)})`);
   // teléfonos: el de CDE aparece en el pie y en la franja de contacto
   const tels = await page.$$eval('a[href^="tel:"]', (as) => [...new Set(as.map((a) => a.getAttribute("href")))]);
   ok(tels.includes("tel:+595972350200"), "el teléfono de ventas de Ciudad del Este está en el pie / la franja de contacto");
@@ -124,16 +131,17 @@ for (const L of LANGS) {
   await page.goto(`${BASE}${L.p}/`, { waitUntil: "load" });
   await page.locator('footer [data-open-contact][data-intent="test-drive"]').first().click();
   const sel = await page.$$eval("#cf-sucursal option", (os) => os.map((o) => ({ v: o.value, t: o.textContent.trim(), d: o.disabled })));
-  ok(sel.length === 3 && sel[0].v === "" && sel[0].d && sel[0].t === L.ph && sel[1].t === L.asu && sel[2].t === L.cde, `selector de sucursal sin valor por defecto: ${L.ph} / ${L.asu} / ${L.cde}`);
+  ok(sel.length === 4 && sel[0].v === "" && sel[0].d && sel[0].t === L.ph && sel[1].t === L.asu && sel[2].t === L.cde && sel[3].t === L.otr && sel.slice(1).map((o) => o.v).join() === "asuncion,cde,otras", `selector de zona sin valor por defecto: ${L.ph} / ${L.asu} / ${L.cde} / ${L.otr}`);
+  ok((await page.textContent('label[for="cf-sucursal"]')).trim() === L.lab, `el campo se llama "${L.lab}"`);
   await page.fill("#cf-nombre", "Ana Martínez");
   await page.fill("#cf-tel", "0981 123 456");
   await page.click("#waForm [type=submit]");
-  ok(posted.length === 0, "sin sucursal no se envía nada");
+  ok(posted.length === 0, "sin zona no se envía nada");
   ok(await page.evaluate(() => document.querySelector("#cf-sucursal").closest(".field").classList.contains("has-error") && !document.querySelector("#cf-sucursal-error").hidden), "marca el error en Sucursal");
   ok(await page.evaluate(() => document.activeElement.id === "cf-sucursal"), "el foco va al campo que falta");
   if (L.name === "es") await shot(page, "form-error-es");
   await page.selectOption("#cf-sucursal", "cde");
-  ok(await page.evaluate(() => document.querySelector("#cf-sucursal-error").hidden), "elegir sucursal limpia el error");
+  ok(await page.evaluate(() => document.querySelector("#cf-sucursal-error").hidden), "elegir zona limpia el error");
   await page.click("#waForm [type=submit]");
   await page.waitForSelector(".form-success:not([hidden])");
   ok(posted.length === 1 && posted[0].sucursal === "cde" && posted[0].nombre === "Ana Martínez" && posted[0].tipo === "Prueba de manejo", `el pedido a la API lleva sucursal=cde (${JSON.stringify(posted[0]).slice(0, 150)}…)`);
@@ -152,6 +160,16 @@ for (const L of LANGS) {
   ok(posted.at(-1).sucursal === "asuncion", "sucursal=asuncion en el segundo envío");
   const href2 = await page.getAttribute("[data-success-wa]", "href");
   ok(href2.startsWith(`https://wa.me/${WA_ASU}?text=`) && decodeURIComponent(href2).includes(`${L.suc}: ${L.asu}`), "con Asunción, WhatsApp va al número de siempre");
+  await page.click(".form-success [data-close-contact]");
+  await page.locator('footer [data-open-contact][data-intent="test-drive"]').first().click();
+  await page.fill("#cf-nombre", "Ana Martínez");
+  await page.fill("#cf-tel", "0981 123 456");
+  await page.selectOption("#cf-sucursal", "otras");
+  await page.click("#waForm [type=submit]");
+  await page.waitForSelector(".form-success:not([hidden])");
+  ok(posted.at(-1).sucursal === "otras", "sucursal=otras en el tercer envío");
+  const href3 = await page.getAttribute("[data-success-wa]", "href");
+  ok(href3.startsWith(`https://wa.me/${WA_ASU}?text=`) && decodeURIComponent(href3).includes(`${L.suc}: ${L.otr}`), `con Otras zonas, WhatsApp va al número de Asunción e incluye "${L.suc}: ${L.otr}"`);
   await context.close();
 }
 

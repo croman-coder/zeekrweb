@@ -146,11 +146,13 @@ T = [
 ("Cerrar", "Close", "Fechar", "关闭"),
 # --- sucursal (Ciudad del Este, 02/10/2026): formulario, selector de WhatsApp y teléfonos
 ("Sucursal", "Branch", "Filial", "门店"),
-("Sucursal más cercana", "Nearest branch", "Filial mais próxima", "最近的门店"),
-("Elegí una sucursal", "Choose a branch", "Escolha uma filial", "请选择门店"),
-("Asunción y resto del país", "Asunción and the rest of the country", "Assunção e resto do país", "亚松森及巴拉圭其他地区"),
+# Zona (desde el 06/10/2026, a pedido de Marketing): Asunción / Ciudad del Este / Otras zonas, en lugar de "Asunción y resto del país"
+("Zona", "Area", "Região", "区域"),
+("Elegí tu zona", "Choose your area", "Escolha sua região", "请选择您所在的区域"),
+("Asunción", "Asunción", "Assunção", "亚松森"),
 ("Ciudad del Este", "Ciudad del Este", "Ciudad del Este", "东方市"),
-("Elegí la sucursal más cercana para derivarte al equipo correcto.", "Choose the nearest branch so we can route you to the right team.", "Escolha a filial mais próxima para direcionarmos você à equipe certa.", "请选择最近的门店，以便我们为您转接合适的团队。"),
+("Otras zonas", "Other areas", "Outras regiões", "其他地区"),
+("Elegí tu zona para derivarte al equipo correcto.", "Choose your area so we can route you to the right team.", "Escolha sua região para direcionarmos você à equipe certa.", "请选择您所在的区域，以便我们为您转接合适的团队。"),
 ("¿Con qué sucursal querés hablar?", "Which branch would you like to talk to?", "Com qual filial você quer falar?", "您想联系哪家门店？"),
 ("Elegí la más cercana y seguís la conversación por WhatsApp.", "Pick the nearest one and continue the conversation on WhatsApp.", "Escolha a mais próxima e continue a conversa pelo WhatsApp.", "请选择最近的门店，然后通过 WhatsApp 继续沟通。"),
 ("Ventas Ciudad del Este", "Sales Ciudad del Este", "Vendas Ciudad del Este", "东方市销售"),

@@ -73,9 +73,11 @@ describe("validate", () => {
     assert.throws(() => validate({ ...good, nombre: "A" }), (e) => e instanceof LeadError && e.status === 422);
     assert.throws(() => validate({ ...good, telefono: "123" }), (e) => e instanceof LeadError && e.status === 422);
   });
-  test("sucursal: reconoce CDE (varias grafías); otro valor es Asunción; sin dato queda en null", () => {
+  test("sucursal: reconoce CDE y otras zonas (varias grafías); otro valor es Asunción; sin dato queda en null", () => {
     for (const v of ["cde", "CDE", " Ciudad del Este ", "ciudad-del-este"]) assert.equal(validate({ ...good, sucursal: v }).sucursal, "cde", v);
-    for (const v of ["asuncion", "Asunción y resto del país", "otra"]) assert.equal(validate({ ...good, sucursal: v }).sucursal, "asuncion", v);
+    for (const v of ["otras", "Otras zonas", " OTRAS ZONAS ", "otras-zonas"]) assert.equal(validate({ ...good, sucursal: v }).sucursal, "otras", v);
+    // Lo que mandaba el sitio antes del 06/10/2026 ("Asunción y resto del país") y lo desconocido siguen cayendo en Asunción.
+    for (const v of ["asuncion", "Asunción", "Asunción y resto del país", "otra"]) assert.equal(validate({ ...good, sucursal: v }).sucursal, "asuncion", v);
     for (const v of [undefined, null, "", "   "]) assert.equal(validate({ ...good, sucursal: v }).sucursal, null, String(v));
   });
 });
@@ -104,9 +106,23 @@ describe("Asunción (el reparto de siempre)", () => {
     const [a, b] = added(bx);
     assert.equal(a.ASSIGNED_BY_ID, 139); assert.equal(b.ASSIGNED_BY_ID, 2171);
     assert.equal(a.ADDRESS_CITY, undefined); assert.equal(b.ADDRESS_CITY, undefined);
-    assert.match(a.COMMENTS, /Sucursal elegida: Asunción y resto del país/);
+    assert.match(a.COMMENTS, /Sucursal elegida: Asunción(\n|$)/);
     assert.ok(!/Sucursal elegida/.test(b.COMMENTS));
     assert.equal(a.SOURCE_ID, "WEB_SR_ZEEKR"); assert.equal(a.UF_CRM_1775591500778, 301);
+  });
+});
+
+describe("Otras zonas", () => {
+  test("el mismo equipo y la misma cola que Asunción, sin ciudad y con la zona en las notas", async () => {
+    const bx = use(fakeBitrix({ users: ALL }));
+    await createLead({ ...good, sucursal: "otras" }, ENV);
+    await createLead({ ...good, sucursal: "asuncion" }, ENV);
+    const [a, b] = added(bx);
+    assert.equal(a.ASSIGNED_BY_ID, 139); assert.equal(b.ASSIGNED_BY_ID, 2171); // una sola cola: el segundo sigue al primero
+    assert.equal(a.ADDRESS_CITY, undefined);
+    assert.match(a.COMMENTS, /Sucursal elegida: Otras zonas(\n|$)/);
+    assert.match(b.COMMENTS, /Sucursal elegida: Asunción(\n|$)/);
+    assert.ok(!/Ciudad del Este/.test(a.SOURCE_DESCRIPTION));
   });
 });
 

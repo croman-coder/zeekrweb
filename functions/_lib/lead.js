@@ -25,13 +25,20 @@ const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "ut
 
 const idList = (v) => String(v || "").split(",").map((s) => s.trim()).filter((s) => /^\d+$/.test(s)).map(Number);
 
-/** Sucursales entre las que elige el visitante (formulario y WhatsApp). Sin dato → se trata como Asunción (el comportamiento de siempre). */
-const SUCURSALES = { asuncion: "Asunción y resto del país", cde: "Ciudad del Este" };
+/**
+ * Zonas entre las que elige el visitante (formulario y WhatsApp): Asunción, Ciudad del Este y otras zonas. Sin dato → se trata como
+ * Asunción (el comportamiento de siempre). Solo CDE tiene equipo propio: "otras" se reparte como Asunción (mismo equipo y misma cola),
+ * igual que "resto del país" hasta el 06/10/2026 (pedido de Marketing, el mismo que en santarosa.com.py).
+ */
+const SUCURSALES = { asuncion: "Asunción", cde: "Ciudad del Este", otras: "Otras zonas" };
 const CDE_ALIAS = new Set(["cde", "ciudad del este", "ciudad-del-este", "ciudad_del_este"]);
+const OTRAS_ALIAS = new Set(["otras", "otras zonas", "otras-zonas", "otras_zonas"]);
 function parseSucursal(v) {
   const s = String(v == null ? "" : v).trim().toLowerCase();
   if (!s) return null;
-  return CDE_ALIAS.has(s) ? "cde" : "asuncion";
+  if (CDE_ALIAS.has(s)) return "cde";
+  if (OTRAS_ALIAS.has(s)) return "otras";
+  return "asuncion"; // también lo que mandaba el sitio antes del 06/10/2026 ("asuncion" con el rótulo "Asunción y resto del país")
 }
 
 function cfg(env) {
@@ -131,7 +138,7 @@ export function validate(body) {
     nombre: str(b.nombre, 120), telefono: str(b.telefono, 40), email: str(b.email, 120) || null,
     modelo: str(b.modelo, 60) || "Aún no lo sé", mensaje: str(b.mensaje, 1500) || null, pagina: str(b.pagina, 300) || null,
     tipo: ["Consulta", "Prueba de manejo"].includes(str(b.tipo, 40)) ? str(b.tipo, 40) : "Prueba de manejo",
-    sucursal: parseSucursal(str(b.sucursal, 40)), // "cde" | "asuncion" | null (el formulario viejo no lo manda)
+    sucursal: parseSucursal(str(b.sucursal, 40)), // "cde" | "asuncion" | "otras" | null (el formulario viejo no lo manda)
     idioma: str(b.idioma, 10).toLowerCase().slice(0, 2) || "es",
     website: str(b.website, 200),
   };

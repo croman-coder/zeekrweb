@@ -58,9 +58,11 @@ PHONES = [
 # Ciudad del Este (desde el 02/10/2026): ZEEKR no tiene equipo propio ahí; los contactos de CDE van a la sucursal multimarca de
 # Santa Rosa CDE. Desde el 06/10/2026 (mail de Bruno Capossela) el número es el del jefe de ventas de esa sucursal,
 # +595 972 350 200 (antes +595 991 702 176), el mismo que usan las otras marcas. El formulario manda sucursal="cde" a la API de leads.
+# Desde el 06/10/2026 (Marketing) la zona se elige entre Asunción, Ciudad del Este y Otras zonas: solo CDE tiene número y equipo propios, "otras"
+# va al de Asunción (WA_NUMBER) y a su misma cola de asesores.
 WA_CDE = "595972350200"
 PHONE_CDE = ("Ventas Ciudad del Este", "0972 350 200", "+595972350200")
-WA_SUCURSALES = (("asuncion", "Asunción y resto del país"), ("cde", "Ciudad del Este"))
+WA_SUCURSALES = (("asuncion", "Asunción"), ("cde", "Ciudad del Este"), ("otras", "Otras zonas"))
 
 
 def phones_all():
@@ -873,9 +875,9 @@ def contact_modal():
         <p class="field-error" id="cf-tel-error" hidden>{_("Ingresá un teléfono válido (ej.: 0981 123 456).")}</p>
       </div>
       <div class="field">
-        <label for="cf-sucursal">{_("Sucursal más cercana")}</label>
-        <select id="cf-sucursal" name="sucursal" required autocomplete="off"><option value="" selected disabled>{_("Elegí una sucursal")}</option>{sucursales}</select>
-        <p class="field-error" id="cf-sucursal-error" hidden>{_("Elegí la sucursal más cercana para derivarte al equipo correcto.")}</p>
+        <label for="cf-sucursal">{_("Zona")}</label>
+        <select id="cf-sucursal" name="sucursal" required autocomplete="off"><option value="" selected disabled>{_("Elegí tu zona")}</option>{sucursales}</select>
+        <p class="field-error" id="cf-sucursal-error" hidden>{_("Elegí tu zona para derivarte al equipo correcto.")}</p>
       </div>
       <div class="field">
         <label for="cf-modelo">{_("Modelo de interés")}</label>
@@ -905,7 +907,7 @@ def contact_modal():
 
 def wa_chooser():
     """Diálogo "¿Con qué sucursal querés hablar?": main.js lo abre al tocar un enlace con data-sucursal-wa (todos los de WhatsApp de ventas)."""
-    nums = {"asuncion": WA_NUMBER, "cde": WA_CDE}
+    nums = {"asuncion": WA_NUMBER, "cde": WA_CDE, "otras": WA_NUMBER}   # otras zonas: la línea de Asunción
     opts = "".join(
         f'<a class="wc-opt" href="https://wa.me/{nums[v]}" target="_blank" rel="noopener" data-wc-opt="{v}">'
         f'<span class="wc-name">{_(label)}</span><span class="wc-num">{wa_display(nums[v])}</span>{ICON_WA}</a>'
@@ -1596,7 +1598,7 @@ def build_meta():
             "## Modelos", *[f"- [{MODELS[k]['name']}]({DOMAIN}/modelos/{MODELS[k]['slug']}/): {MODELS[k]['tagline']}. {MODELS[k]['schema_desc']}" for k in MODEL_ORDER], "",
             "## Datos clave", "- ZEEKR 7X: 800 V, 0–100 km/h en 3,8 s (Performance), hasta 543 km WLTP; garantía 5 años/100.000 km (vehículo) y 8 años/160.000 km (batería).",
             "- ZEEKR X: hasta 440 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 69 kWh.", "- ZEEKR 001: hasta 620 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 100 kWh, carga 10–80 % en <30 min (200 kW DC).",
-            "- Contacto ventas: +595 971 370 006 · Ventas Ciudad del Este: +595 972 350 200 · Postventa: +595 974 772 247", f"- WhatsApp: https://wa.me/{WA_NUMBER} (Asunción y resto del país) · https://wa.me/{WA_CDE} (Ciudad del Este)", "",
+            "- Contacto ventas: +595 971 370 006 · Ventas Ciudad del Este: +595 972 350 200 · Postventa: +595 974 772 247", f"- WhatsApp: https://wa.me/{WA_NUMBER} (Asunción y otras zonas) · https://wa.me/{WA_CDE} (Ciudad del Este)", "",
             "## Páginas", f"- [Inicio]({DOMAIN}/)", f"- [Modelos]({DOMAIN}/modelos/)", f"- [Noticias]({DOMAIN}/noticias/)", f"- [Nosotros]({DOMAIN}/nosotros/)",
             *[f"- [{n['title']}]({DOMAIN}/noticias/{n['slug']}/)" for n in NEWS if n.get("body")], "",
             "## Idiomas", f"- English: {DOMAIN}/en/", f"- Português: {DOMAIN}/pt/", f"- 中文: {DOMAIN}/zh/", "",

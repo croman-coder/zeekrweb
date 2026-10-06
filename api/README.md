@@ -25,10 +25,14 @@ en la cola de ZEEKR de Bitrix. Historial: hasta el 03/10/2026 iban todos al Jefe
 día se pasó a Mathias y Pedro Ocampos (19827); el 06/10/2026 Bruno dejó a Pedro como vendedor exclusivo de Renault y quedó solo
 Mathias. El jefe queda de respaldo.
 
-- **Formulario** (modal de prueba de manejo / contacto): campo obligatorio "Sucursal más cercana", sin valor por defecto.
-  El POST lleva `sucursal: "asuncion" | "cde"`. Un cliente viejo que no lo manda se trata como Asunción (reparto de siempre).
+- **Formulario** (modal de prueba de manejo / contacto): campo obligatorio "Zona", sin valor por defecto. Desde el 06/10/2026 ofrece
+  tres opciones, a pedido de Marketing (antes eran dos: "Asunción y resto del país" y "Ciudad del Este"): Asunción, Ciudad del Este y
+  Otras zonas. El POST lleva `sucursal: "asuncion" | "cde" | "otras"`. Solo CDE tiene equipo propio: **Otras zonas** se reparte como
+  Asunción (mismo equipo y misma cola) y usa su mismo WhatsApp; la nota del prospecto dice "Sucursal elegida: Asunción / Ciudad del
+  Este / Otras zonas". Un cliente viejo que no lo manda (o que manda `asuncion` con el rótulo anterior) se trata como Asunción
+  (reparto de siempre). Los textos están en `i18n_src.py` (4 idiomas: hay que regenerar `i18n.py` con `python3 i18n_src.py`).
 - **WhatsApp**: todos los enlaces de ventas (encabezado, pie, franja de contacto, modal) llevan `data-sucursal-wa` y abren el
-  diálogo `#waChooser` ("¿Con qué sucursal querés hablar?") con los dos números: Asunción `WA_NUMBER` (`595971370006`) y CDE
+  diálogo `#waChooser` ("¿Con qué sucursal querés hablar?") con tres opciones: Asunción y Otras zonas, con `WA_NUMBER` (`595971370006`), y CDE
   `WA_CDE` (`595972350200`). "Continuar por WhatsApp" y el respaldo del formulario usan el número de la sucursal elegida.
   Abrir el diálogo no cuenta como clic a WhatsApp; el clic cuenta al elegir (`click_whatsapp` con `sucursal`).
 - **Teléfonos**: "Ventas Ciudad del Este 0972 350 200" (`PHONE_CDE` en `build_site.py`; se suma a los del CMS justo después del
