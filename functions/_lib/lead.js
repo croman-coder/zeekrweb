@@ -9,10 +9,11 @@
  * env: BITRIX_WEBHOOK_URL (obligatoria) · ZEEKR_DEPARTMENT_ID=29 · LEAD_SOURCE_ID=WEB_SR_ZEEKR
  *      BRAND_FIELD=UF_CRM_1775591500778 · BRAND_VALUE=301 · FALLBACK_ASSIGNEE_ID=73 · ADVISOR_IDS="139,2171"
  *      Sucursal Ciudad del Este: si el formulario manda sucursal="cde", el lead va a los asesores de CDE
- *      (ZEEKR no tiene equipo propio en CDE: en producción CDE_ADVISOR_IDS="16001,19827" = Mathias Acosta y Pedro Ocampos, del
- *      departamento 141 "JAC RENAULT & LEAPMOTOR CDE", que ya están en la cola de ZEEKR de Bitrix; cambiado el 03/10/2026, antes
- *      iba todo al jefe)
- *        CDE_ADVISOR_IDS="16001,19827"  (opcional) pool explícito de CDE; sin esto: departamento CDE_DEPARTMENT_ID + cargo ASESOR
+ *      (ZEEKR no tiene equipo propio en CDE: en producción CDE_ADVISOR_IDS="16001" = Mathias Acosta, del departamento 155
+ *      "NUEVAS ENERGÍAS (LEAP, ZEEKR, XPENG, JMEV)", vendedor de Leap / Zeekr / JMEV / Xpeng en la sucursal multimarca y que ya está
+ *      en la cola de ZEEKR de Bitrix. El 03/10/2026 se pasó de "todo al jefe" a "16001,19827" (con Pedro Ocampos); el 06/10/2026
+ *      Bruno Capossela dejó a Pedro como vendedor exclusivo de Renault, así que quedó solo Mathias)
+ *        CDE_ADVISOR_IDS="16001"        (opcional) pool explícito de CDE; sin esto: departamento CDE_DEPARTMENT_ID + cargo ASESOR
  *        CDE_DEPARTMENT_ID=133          "MULTIMARCAS CDE"
  *        CDE_FALLBACK_ASSIGNEE_ID=21707 Walter Bavera, Jefe de Ventas Multimarcas CDE: recibe el lead si ese equipo no tiene asesores activos
  *

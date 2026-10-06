@@ -17,23 +17,25 @@ BITRIX_WEBHOOK_URL=... PORT=8801 node api/server.mjs
 
 Pedido de Gerencia Comercial (mail de Bruno Capossela del 01/10/2026, "Filtros WEB Sucursal CDE - Todas las marcas"): los
 contactos de Ciudad del Este (CDE) van directo al equipo comercial de esa zona. **ZEEKR no tiene equipo propio en CDE**
-(en Bitrix los equipos de CDE son 135 Soueast+Jetour, 137 GWM, 139 Mitsubishi y 141 JAC+Renault+Leapmotor), así que sus
-contactos de CDE van al **equipo multimarca de CDE**: `+595 991 702 176` por WhatsApp/teléfono y, en Bitrix, a los asesores
-del departamento 141, **Mathias Acosta (16001) y Pedro Ocampos (19827)**, que ya están en la cola de ZEEKR de Bitrix. Hasta el
-03/10/2026 iban todos al Jefe de Ventas Multimarcas CDE (21707, Walter Bavera): Croman pidió cambiarlo a los asesores; el jefe
-queda de respaldo. Es el mismo criterio que Croman fijó para JMEV; el número es un supuesto razonable, no confirmado por escrito.
+(en Bitrix los equipos de CDE son 135 Soueast+Jetour, 137 GWM, 139 Mitsubishi, 141 JAC, 153 Renault y 155 Nuevas Energías), así que
+sus contactos de CDE van a la **sucursal multimarca de CDE**: `+595 972 350 200` por WhatsApp/teléfono (el del jefe de ventas de la
+sucursal, pedido por Bruno Capossela en su mail del 06/10/2026; antes `+595 991 702 176`) y, en Bitrix, a **Mathias Acosta (16001)**,
+del departamento 155 "NUEVAS ENERGÍAS (LEAP, ZEEKR, XPENG, JMEV)", vendedor de Leap / Zeekr / JMEV / Xpeng en esa sucursal, que ya está
+en la cola de ZEEKR de Bitrix. Historial: hasta el 03/10/2026 iban todos al Jefe de Ventas Multimarcas CDE (21707, Walter Bavera); ese
+día se pasó a Mathias y Pedro Ocampos (19827); el 06/10/2026 Bruno dejó a Pedro como vendedor exclusivo de Renault y quedó solo
+Mathias. El jefe queda de respaldo.
 
 - **Formulario** (modal de prueba de manejo / contacto): campo obligatorio "Sucursal más cercana", sin valor por defecto.
   El POST lleva `sucursal: "asuncion" | "cde"`. Un cliente viejo que no lo manda se trata como Asunción (reparto de siempre).
 - **WhatsApp**: todos los enlaces de ventas (encabezado, pie, franja de contacto, modal) llevan `data-sucursal-wa` y abren el
   diálogo `#waChooser` ("¿Con qué sucursal querés hablar?") con los dos números: Asunción `WA_NUMBER` (`595971370006`) y CDE
-  `WA_CDE` (`595991702176`). "Continuar por WhatsApp" y el respaldo del formulario usan el número de la sucursal elegida.
+  `WA_CDE` (`595972350200`). "Continuar por WhatsApp" y el respaldo del formulario usan el número de la sucursal elegida.
   Abrir el diálogo no cuenta como clic a WhatsApp; el clic cuenta al elegir (`click_whatsapp` con `sucursal`).
-- **Teléfonos**: "Ventas Ciudad del Este 0991 702 176" (`PHONE_CDE` en `build_site.py`; se suma a los del CMS justo después del
+- **Teléfonos**: "Ventas Ciudad del Este 0972 350 200" (`PHONE_CDE` en `build_site.py`; se suma a los del CMS justo después del
   último "Ventas": pie, franja de contacto, tarjetas del modal, JSON-LD y `llms.txt`).
 - **API**: `sucursal="cde"` → el lead va a `CDE_ADVISOR_IDS` (cola justa propia, no cuenta la de Asunción), con `ADDRESS_CITY`
   = Ciudad del Este, "Sucursal elegida" en los comentarios y en la descripción del origen. Sin asesores → `CDE_FALLBACK_ASSIGNEE_ID`
-  (nunca el responsable de Asunción). Variables (app 17): `CDE_ADVISOR_IDS=16001,19827` · `CDE_DEPARTMENT_ID=133` ·
+  (nunca el responsable de Asunción). Variables (app 17): `CDE_ADVISOR_IDS=16001` · `CDE_DEPARTMENT_ID=133` ·
   `CDE_FALLBACK_ASSIGNEE_ID=21707`. Para sumar a alguien al reparto de CDE: agregar su ID a `CDE_ADVISOR_IDS` y redesplegar la app 17.
 - **Qué NO está en el código**: las preguntas frecuentes ("Escribinos por WhatsApp al 0971 370 006…") y la lista de teléfonos del CMS
   viven en Directus; si se quiere nombrar el número de CDE en las FAQ se edita ahí.

@@ -12,7 +12,7 @@ const SHOTS = process.env.SHOTS || "";
 if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 const { chromium } = await import(PW);
 
-const WA_ASU = "595971370006", WA_CDE = "595991702176";
+const WA_ASU = "595971370006", WA_CDE = "595972350200";
 const LANGS = [
   { p: "", name: "es", h2: "¿Con qué sucursal querés hablar?", ph: "Elegí una sucursal", asu: "Asunción y resto del país", cde: "Ciudad del Este", suc: "Sucursal" },
   { p: "/en", name: "en", h2: "Which branch would you like to talk to?", ph: "Choose a branch", asu: "Asunción and the rest of the country", cde: "Ciudad del Este", suc: "Branch" },
@@ -60,7 +60,7 @@ for (const L of LANGS) {
   const opts = await page.$$eval("#waChooser a.wc-opt", (as) => as.map((a) => ({ href: a.href, name: a.querySelector(".wc-name").textContent.trim(), num: a.querySelector(".wc-num").textContent.trim() })));
   ok(opts.length === 2 && opts[0].href === `https://wa.me/${WA_ASU}` && opts[1].href === `https://wa.me/${WA_CDE}`, "dos opciones: Asunción y Ciudad del Este, con su número");
   ok(opts[0].name === L.asu && opts[1].name === L.cde, `textos traducidos: ${L.asu} / ${L.cde}`);
-  ok(opts[0].num === "0971 370 006" && opts[1].num === "0991 702 176", "se ve el número de cada una");
+  ok(opts[0].num === "0971 370 006" && opts[1].num === "0972 350 200", "se ve el número de cada una");
   ok((await events(page)).length === 0, "abrir el selector no cuenta como clic a WhatsApp");
   await shot(page, `chooser-${L.name}`);
   const [popup] = await Promise.all([context.waitForEvent("page"), page.click('a.wc-opt[data-wc-opt="cde"]')]);
@@ -72,7 +72,7 @@ for (const L of LANGS) {
   ok(ev.length === 1 && ev[0].sucursal === "cde" && ev[0].location === "header", `un solo click_whatsapp con sucursal=cde y location=header (${JSON.stringify(ev)})`);
   // teléfonos: el de CDE aparece en el pie y en la franja de contacto
   const tels = await page.$$eval('a[href^="tel:"]', (as) => [...new Set(as.map((a) => a.getAttribute("href")))]);
-  ok(tels.includes("tel:+595991702176"), "el teléfono de ventas de Ciudad del Este está en el pie / la franja de contacto");
+  ok(tels.includes("tel:+595972350200"), "el teléfono de ventas de Ciudad del Este está en el pie / la franja de contacto");
   await context.close();
 }
 

@@ -55,10 +55,11 @@ PHONES = [
     ("Postventa", "0974 772 247", "+595974772247"),
 ]
 
-# Ciudad del Este (desde el 02/10/2026): ZEEKR no tiene equipo propio ahí; los contactos de CDE van al equipo multimarca de
-# Santa Rosa CDE (el mismo número que usan las otras marcas). El formulario manda sucursal="cde" a la API de leads.
-WA_CDE = "595991702176"
-PHONE_CDE = ("Ventas Ciudad del Este", "0991 702 176", "+595991702176")
+# Ciudad del Este (desde el 02/10/2026): ZEEKR no tiene equipo propio ahí; los contactos de CDE van a la sucursal multimarca de
+# Santa Rosa CDE. Desde el 06/10/2026 (mail de Bruno Capossela) el número es el del jefe de ventas de esa sucursal,
+# +595 972 350 200 (antes +595 991 702 176), el mismo que usan las otras marcas. El formulario manda sucursal="cde" a la API de leads.
+WA_CDE = "595972350200"
+PHONE_CDE = ("Ventas Ciudad del Este", "0972 350 200", "+595972350200")
 WA_SUCURSALES = (("asuncion", "Asunción y resto del país"), ("cde", "Ciudad del Este"))
 
 
@@ -1595,7 +1596,7 @@ def build_meta():
             "## Modelos", *[f"- [{MODELS[k]['name']}]({DOMAIN}/modelos/{MODELS[k]['slug']}/): {MODELS[k]['tagline']}. {MODELS[k]['schema_desc']}" for k in MODEL_ORDER], "",
             "## Datos clave", "- ZEEKR 7X: 800 V, 0–100 km/h en 3,8 s (Performance), hasta 543 km WLTP; garantía 5 años/100.000 km (vehículo) y 8 años/160.000 km (batería).",
             "- ZEEKR X: hasta 440 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 69 kWh.", "- ZEEKR 001: hasta 620 km WLTP (RWD), 0–100 km/h en 3,8 s (AWD), batería 100 kWh, carga 10–80 % en <30 min (200 kW DC).",
-            "- Contacto ventas: +595 971 370 006 · Ventas Ciudad del Este: +595 991 702 176 · Postventa: +595 974 772 247", f"- WhatsApp: https://wa.me/{WA_NUMBER} (Asunción y resto del país) · https://wa.me/{WA_CDE} (Ciudad del Este)", "",
+            "- Contacto ventas: +595 971 370 006 · Ventas Ciudad del Este: +595 972 350 200 · Postventa: +595 974 772 247", f"- WhatsApp: https://wa.me/{WA_NUMBER} (Asunción y resto del país) · https://wa.me/{WA_CDE} (Ciudad del Este)", "",
             "## Páginas", f"- [Inicio]({DOMAIN}/)", f"- [Modelos]({DOMAIN}/modelos/)", f"- [Noticias]({DOMAIN}/noticias/)", f"- [Nosotros]({DOMAIN}/nosotros/)",
             *[f"- [{n['title']}]({DOMAIN}/noticias/{n['slug']}/)" for n in NEWS if n.get("body")], "",
             "## Idiomas", f"- English: {DOMAIN}/en/", f"- Português: {DOMAIN}/pt/", f"- 中文: {DOMAIN}/zh/", "",

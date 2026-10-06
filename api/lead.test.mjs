@@ -121,9 +121,9 @@ describe("Sucursal Ciudad del Este (CDE)", () => {
     assert.equal(added(bx)[0].ASSIGNED_BY_ID, 21707);
     assert.equal(bx.calls.find((c) => c.method === "user.get").body.filter.UF_DEPARTMENT, 133);
   });
-  test("configuración de producción (CDE_ADVISOR_IDS=16001,19827): los de CDE rotan entre Mathias y Pedro y nunca caen en Asunción ni en el jefe", async () => {
+  test("configuración de producción (CDE_ADVISOR_IDS=16001): los de CDE van todos a Mathias (Pedro es exclusivo de Renault) y nunca caen en Asunción ni en el jefe", async () => {
     const bx = use(fakeBitrix({ users: ALL }));
-    const env = { ...ENV, CDE_ADVISOR_IDS: "16001,19827" };
+    const env = { ...ENV, CDE_ADVISOR_IDS: "16001" };
     const got = [];
     for (let i = 0; i < 6; i++) {
       resetState();
@@ -131,9 +131,9 @@ describe("Sucursal Ciudad del Este (CDE)", () => {
       assert.equal(r.sucursal, "cde");
       got.push(added(bx).at(-1).ASSIGNED_BY_ID);
     }
-    assert.ok(got.every((id) => [16001, 19827].includes(id)), `solo Mathias y Pedro: ${got}`);
+    assert.ok(got.every((id) => id === 16001), `solo Mathias (16001), ni Pedro (19827) ni el jefe: ${got}`);
     assert.deepEqual([...new Set(added(bx).map((f) => f.ADDRESS_CITY))], ["Ciudad del Este"]);
-    // y con la cola actualizándose alternan
+    // y con la cola actualizándose sigue siendo Mathias (único del pool)
     const alt = use(fakeBitrix({ users: ALL }));
     const seq = [];
     for (let i = 0; i < 4; i++) {
@@ -142,7 +142,7 @@ describe("Sucursal Ciudad del Este (CDE)", () => {
       seq.push(a.id);
       alt.leads.push({ ID: 5000 + i, SOURCE_ID: "WEB_SR_ZEEKR", ASSIGNED_BY_ID: a.id });
     }
-    assert.deepEqual(seq, [16001, 19827, 16001, 19827]);
+    assert.deepEqual(seq, [16001, 16001, 16001, 16001]);
   });
   test("CDE_ADVISOR_IDS explícito arma el equipo de CDE y rota entre ellos", async () => {
     const bx = use(fakeBitrix({ users: ALL }));
