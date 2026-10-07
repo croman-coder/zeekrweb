@@ -1561,7 +1561,9 @@ def page_404():
 # URLs del sitio anterior (DreamHost, PHP) que Google tenía indexadas → equivalentes nuevas (301).
 # politica.php queda en 404 hasta que exista una página de política de privacidad.
 LEGACY_PHP = [("/index.php", "/"), ("/zeekr001.php", "/modelos/zeekr-001/"), ("/zeekrx.php", "/modelos/zeekr-x/"),
-              ("/zeekr7x.php", "/modelos/zeekr-7x/"), ("/noticias.php", "/noticias/"), ("/nosotros.php", "/nosotros/")] + [
+              ("/zeekr7x.php", "/modelos/zeekr-7x/"), ("/noticias.php", "/noticias/"), ("/nosotros.php", "/nosotros/"),
+              # La prueba de manejo hoy es un modal que se abre desde cualquier página: la portada es su equivalente.
+              ("/test-drive.php", "/")] + [
     (f"/{n}.php", "/noticias/") for n in ("asociacion-qualcomm", "audio-premium", "ces-2025", "diferencias-traccion", "luces-inteligentes",
                                           "noticia1", "noticia2", "revolucion-electrica", "suvelectrico")]
 
