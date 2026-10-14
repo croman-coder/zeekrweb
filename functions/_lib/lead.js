@@ -136,8 +136,12 @@ export function validate(body) {
   const str = (v, max) => (v == null ? "" : String(v)).trim().slice(0, max);
   const lead = {
     nombre: str(b.nombre, 120), telefono: str(b.telefono, 40), email: str(b.email, 120) || null,
-    modelo: str(b.modelo, 60) || "Aún no lo sé", mensaje: str(b.mensaje, 1500) || null, pagina: str(b.pagina, 300) || null,
-    tipo: ["Consulta", "Prueba de manejo"].includes(str(b.tipo, 40)) ? str(b.tipo, 40) : "Prueba de manejo",
+    modelo: str(b.modelo, 60) || "Aún no lo sé",
+    // El chat de marcas (chat.santarosa.lat) manda `origen: "chat"` y el texto en `comentario`; el formulario del sitio, `mensaje`.
+    mensaje: str(b.mensaje, 1500) || str(b.comentario, 1500) || null, pagina: str(b.pagina, 300) || null,
+    canal: str(b.origen, 20).toLowerCase() === "chat" ? "chat" : null,
+    // Quien escribe en el chat no pidió una prueba de manejo: es una consulta, salvo que el pedido diga otra cosa.
+    tipo: ["Consulta", "Prueba de manejo"].includes(str(b.tipo, 40)) ? str(b.tipo, 40) : str(b.origen, 20).toLowerCase() === "chat" ? "Consulta" : "Prueba de manejo",
     sucursal: parseSucursal(str(b.sucursal, 40)), // "cde" | "asuncion" | "otras" | null (el formulario viejo no lo manda)
     idioma: str(b.idioma, 10).toLowerCase().slice(0, 2) || "es",
     website: str(b.website, 200),
@@ -175,6 +179,7 @@ export async function createLead(body, env) {
   const [first, last] = parts.length > 1 ? [parts[0], parts.slice(1).join(" ")] : [lead.nombre, ""];
   const notes = [`Solicitud: ${lead.tipo}`, `Modelo de interés: ${lead.modelo}`];
   if (lead.sucursal) notes.push(`Sucursal elegida: ${SUCURSALES[lead.sucursal]}`);
+  if (lead.canal === "chat") notes.push("Enviado desde: chat");
   if (lead.mensaje) notes.push(`Mensaje: ${lead.mensaje}`);
   if (lead.pagina) notes.push(`Página: ${lead.pagina}`);
   const LANG_NAMES = { es: "Español", en: "English", pt: "Português", zh: "中文" };

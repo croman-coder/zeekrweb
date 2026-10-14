@@ -1016,6 +1016,7 @@ def render_page(path, title, desc, content, nav_active, jsonld, og_img, preload=
 </main>
 {footer()}
 <script src="/js/main.js?v={js_v}" defer></script>
+<script src="https://chat.santarosa.lat/widget.js" data-marca="zeekr" defer></script>
 </body>
 </html>
 '''
@@ -1589,7 +1590,7 @@ def build_meta():
     sec = ["  X-Content-Type-Options: nosniff", "  X-Frame-Options: SAMEORIGIN",
            "  Referrer-Policy: strict-origin-when-cross-origin", "  Permissions-Policy: camera=(), microphone=(), geolocation=()"]
     sec += ["  Strict-Transport-Security: max-age=31536000; includeSubDomains",
-            "  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://static.cloudflareinsights.com https://connect.facebook.net; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://stats.g.doubleclick.net https://cloudflareinsights.com https://*.cloudflareinsights.com https://www.facebook.com https://connect.facebook.net; img-src 'self' data: https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://stats.g.doubleclick.net https://www.facebook.com; style-src 'self' 'unsafe-inline'; font-src 'self'; media-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://wa.me https://api.whatsapp.com; upgrade-insecure-requests"]
+            "  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://static.cloudflareinsights.com https://connect.facebook.net https://chat.santarosa.lat https://challenges.cloudflare.com; connect-src 'self' https://chat.santarosa.lat https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://stats.g.doubleclick.net https://cloudflareinsights.com https://*.cloudflareinsights.com https://www.facebook.com https://connect.facebook.net; img-src 'self' data: https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.google.com https://stats.g.doubleclick.net https://www.facebook.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self'; media-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://wa.me https://api.whatsapp.com; upgrade-insecure-requests"]
     hdr = ["# Cloudflare Pages: para que la vista previa *.pages.dev no se indexe, agregar al crear el proyecto:", "# https://<proyecto>.pages.dev/*", "#   X-Robots-Tag: noindex, nofollow", "/*", *sec, "/images/*", "  Cache-Control: public, max-age=2592000, immutable", "/fonts/*",
            "  Cache-Control: public, max-age=31536000, immutable", "/css/*", "  Cache-Control: public, max-age=2592000, immutable",
            "/js/*", "  Cache-Control: public, max-age=2592000, immutable", "/icons/*", "  Cache-Control: public, max-age=2592000, immutable",

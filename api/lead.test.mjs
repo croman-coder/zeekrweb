@@ -237,3 +237,28 @@ describe("Sucursal Ciudad del Este (CDE)", () => {
     assert.equal(res.status, 503);
   });
 });
+
+describe("chat de marcas (origen: chat)", () => {
+  test("validate: el texto viene en comentario y, sin tipo, es una Consulta (no una prueba de manejo)", () => {
+    const l = validate({ nombre: "Ana Martínez", telefono: "0981 123 456", modelo: "ZEEKR 7X", comentario: "Quiere ver el 7X", origen: "chat" });
+    assert.equal(l.mensaje, "Quiere ver el 7X"); assert.equal(l.canal, "chat"); assert.equal(l.tipo, "Consulta");
+  });
+  test("validate: mensaje manda sobre comentario, y un origen desconocido se ignora", () => {
+    const l = validate({ ...good, comentario: "otro", origen: "tiktok" });
+    assert.equal(l.mensaje, "Quiero probarlo"); assert.equal(l.canal, null); assert.equal(l.tipo, "Prueba de manejo");
+  });
+  test("el prospecto del chat queda marcado «Enviado desde: chat» y devuelve su id", async () => {
+    const bx = use(fakeBitrix({ users: ALL }));
+    const r = await createLead({ nombre: "Ana Martínez", telefono: "0981 123 456", modelo: "ZEEKR 7X", comentario: "Hola", origen: "chat", sucursal: "cde" }, ENV);
+    assert.equal(r.ok, true); assert.ok(r.leadId);
+    const [a] = added(bx);
+    assert.match(a.COMMENTS, /Enviado desde: chat/); assert.match(a.COMMENTS, /Mensaje: Hola/);
+    assert.match(a.TITLE, /Consulta/);
+  });
+  test("el formulario del sitio no lleva la marca del chat", async () => {
+    const bx = use(fakeBitrix({ users: ALL }));
+    await createLead(good, ENV);
+    assert.ok(!/Enviado desde: chat/.test(added(bx)[0].COMMENTS));
+  });
+});
+
